@@ -5,27 +5,37 @@ description = "Enterprise AIOps Agent Platform"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    # Web
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
+    # Config / Validation
     "pydantic>=2.10.0",
     "pydantic-settings>=2.6.0",
+    "python-dotenv>=1.0.1",
+    # Utils
     "loguru>=0.7.3",
     "httpx>=0.28.0",
-    "python-dotenv>=1.0.1",
+    # Database
     "sqlalchemy[asyncio]>=2.0.36",
     "asyncmy>=0.2.9",
     "alembic>=1.14.0",
     "pymysql>=1.1.1",
     "cryptography>=44.0.0",
+    # Agent（LangGraph 1.x；禁止 0.x API / AgentExecutor）
+    # langchain-core 需 >=1.4.x 才能满足 langgraph 1.2 解析；勿锁到 1.2.x
+    "langgraph>=1.2.0,<1.3.0",
+    "langchain-core>=1.4.7,<2.0.0",
+    # Test
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    # Quality
+    "ruff>=0.8.0",
+    "black>=24.10.0",
+    "isort>=5.13.0",
 ]
 
 [dependency-groups]
 dev = [
-    "pytest>=8.3.0",
-    "pytest-asyncio>=0.24.0",
-    "ruff>=0.8.0",
-    "black>=24.10.0",
-    "isort>=5.13.0",
     "aiosqlite>=0.20.0",
 ]
 faiss = [
