@@ -9,11 +9,21 @@ from app.tools.exceptions import (
     ToolRetryExhaustedError,
     ToolTimeoutError,
 )
-from app.tools.executor import BaseExecutorTool, ExecuteRequest
+from app.tools.executor import BaseExecutorTool, ExecuteRequest, MockExecutorTool
+from app.tools.factory import build_mock_registry
 from app.tools.immutability import freeze_str_tags
-from app.tools.knowledge import BaseKnowledgeTool, KnowledgeSearchQuery
-from app.tools.log import BaseLogTool, LogSearchQuery
-from app.tools.metric import BaseMetricTool, MetricInstantQuery, MetricRangeQuery
+from app.tools.knowledge import (
+    BaseKnowledgeTool,
+    KnowledgeSearchQuery,
+    MockKnowledgeTool,
+)
+from app.tools.log import BaseLogTool, LogSearchQuery, MockLogTool
+from app.tools.metric import (
+    BaseMetricTool,
+    MetricInstantQuery,
+    MetricRangeQuery,
+    MockMetricTool,
+)
 from app.tools.registry import ToolRegistry
 from app.tools.results import ToolMetadata, ToolResult
 from app.tools.runtime import RuntimeDependencies
@@ -31,6 +41,10 @@ __all__ = [
     "LogSearchQuery",
     "MetricInstantQuery",
     "MetricRangeQuery",
+    "MockExecutorTool",
+    "MockKnowledgeTool",
+    "MockLogTool",
+    "MockMetricTool",
     "RuntimeDependencies",
     "ToolAlreadyRegisteredError",
     "ToolCategory",
@@ -43,5 +57,6 @@ __all__ = [
     "ToolResult",
     "ToolRetryExhaustedError",
     "ToolTimeoutError",
+    "build_mock_registry",
     "freeze_str_tags",
 ]
