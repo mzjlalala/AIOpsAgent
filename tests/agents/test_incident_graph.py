@@ -97,6 +97,6 @@ async def test_max_steps_forces_reporter() -> None:
             "artifacts": [],
         }
     )
-    print( final)
+    print(final)
     assert final.get("report")
     assert final.get("step_count", 0) >= 1

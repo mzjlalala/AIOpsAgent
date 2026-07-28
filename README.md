@@ -5,7 +5,7 @@
 基于大语言模型 + Agent Workflow + RAG + MCP，支持故障分析、指标/日志排查、
 知识库检索、人工审批后的自动化操作，以及事故复盘报告生成。
 
-> 当前进度：**第七阶段 — LangGraph Multi-Agent**。
+> 当前进度：**第八阶段 — Workflow（Plan-Execute / Approval）**。
 
 ## 技术栈（截至本阶段）
 
@@ -18,6 +18,7 @@
 - RAG：Ingest/Retrieve 分层流水线、InMemory VectorStore、可选 FAISS adapter
 - Memory：能力组合 Backend + Conversation/Session/Long/Experience + `MemoryManager`
 - Agents：LangGraph **1.x**（StateGraph + START/END + conditional_edges，不用 AgentExecutor）+ MockLLM
+- Workflow：Plan-Execute 外层引擎 + MemorySaver + `interrupt`/`Command(resume)` 审批闸门
 - uv（依赖与虚拟环境）
 - pytest / aiosqlite / Ruff / Black / isort
 
@@ -79,7 +80,7 @@ app/
   tools/         # Tool 抽象 / Mock / Registry / 工厂
   adapters/      # MCP 等外部适配器接口
   agents/        # LangGraph Multi-Agent（事故排查图）
-  workflows/     # LangGraph 工作流（后续阶段）
+  workflows/     # Plan-Execute / Approval（MemorySaver + interrupt）
   rag/           # RAG：models / ingest / retrieve / store / adapters
   memory/        # Memory：能力组合 Backend + Manager
   services/      # 领域服务（后续阶段）
@@ -100,8 +101,8 @@ tests/           # pytest
 4. Mock Tool 实现
 5. Embedding Provider + RAG
 6. Memory 系统
-7. LangGraph Multi-Agent（当前）
-8. Workflow（Plan-Execute / Approval）
+7. LangGraph Multi-Agent
+8. Workflow（Plan-Execute / Approval）（当前）
 9. API 接口（Chat / Incident / SSE）
 10. Docker 部署
 11. 测试完善

@@ -10,12 +10,13 @@ from pydantic import BaseModel, Field
 
 
 class PlanStep(BaseModel):
-    """可追踪的计划步骤（为 Phase8 Workflow 预留 status）。"""
+    """可追踪的计划步骤（为 Phase8 Workflow 预留 status / 审批）。"""
 
     step_id: str
     agent: str = Field(description="目标专家：metric/log/knowledge/executor 等。")
     goal: str
     status: Literal["pending", "running", "success", "failed", "retry"] = "pending"
+    requires_approval: bool = False
 
 
 class AgentArtifact(BaseModel):
