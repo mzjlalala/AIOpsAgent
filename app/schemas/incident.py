@@ -13,7 +13,16 @@ class IncidentCreate(BaseModel):
     query: str = Field(min_length=1, description="用户故障描述。")
     scenario: str | None = Field(
         default=None,
-        description="MockLLM scenario：cpu_high / memory_leak 等。",
+        description="MockLLM scenario：cpu_high / memory_leak / auto_ops 等。",
+    )
+
+
+class OneClickOpsRequest(BaseModel):
+    """一键运维；无需用户填写事故描述。"""
+
+    service: str | None = Field(
+        default=None,
+        description="目标服务名，默认 api。",
     )
 
 

@@ -2,7 +2,12 @@
 
 from app.schemas.filters import MetadataFilter
 from app.schemas.health import HealthResponse
-from app.schemas.incident import ApproveRequest, IncidentCreate, WorkflowRunResponse
+from app.schemas.incident import (
+    ApproveRequest,
+    IncidentCreate,
+    OneClickOpsRequest,
+    WorkflowRunResponse,
+)
 from app.schemas.sse import SseEvent
 
 __all__ = [
@@ -10,6 +15,7 @@ __all__ = [
     "HealthResponse",
     "IncidentCreate",
     "MetadataFilter",
+    "OneClickOpsRequest",
     "SseEvent",
     "WorkflowRunResponse",
 ]

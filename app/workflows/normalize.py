@@ -8,16 +8,12 @@ from app.agents.models import PlanStep
 
 
 def normalize_step_approval(raw: dict[str, Any]) -> dict[str, Any]:
-    """按 agent 补齐 requires_approval；显式值一律保留。
+    """补齐 requires_approval；当前产品默认全查询、无需审批。
 
-    必须在 ``PlanStep.model_validate`` 之前调用，否则无法区分
-    「缺省 False」与「显式 False」。
+    缺省 → False；仅显式 ``requires_approval=True`` 才进闸门（预留）。
+    必须在 ``PlanStep.model_validate`` 之前调用。
     """
-    agent = raw.get("agent", "")
-    has_explicit = "requires_approval" in raw
-    if agent == "executor" and not has_explicit:
-        return {**raw, "requires_approval": True}
-    if agent != "executor" and not has_explicit:
+    if "requires_approval" not in raw:
         return {**raw, "requires_approval": False}
     return dict(raw)
 

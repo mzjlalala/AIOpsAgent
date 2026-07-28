@@ -72,8 +72,17 @@ def build_plan_execute_graph(
             }
         query = state.get("user_query") or ""
         raw_text = await runtime.llm.acomplete(
-            system="你是运维规划助手，只输出 JSON steps。",
-            prompt=f"请规划 plan steps，用户问题：{query}",
+            system=(
+                "你是运维规划助手。只输出 JSON 数组，不要 Markdown 围栏以外的解释。"
+                "每个元素必须含 step_id(字符串)、agent、goal。"
+                "agent 只能是: metric, log, knowledge, executor。"
+            ),
+            prompt=(
+                "请为以下运维目标制定排查/巡检 plan steps（JSON 数组）。\n"
+                f"目标: {query}\n"
+                "字段: step_id, agent, goal。"
+                "全部为查询类步骤，不要设置 requires_approval=true。"
+            ),
         )
         parsed = parse_json_payload(raw_text)
         if not isinstance(parsed, list):

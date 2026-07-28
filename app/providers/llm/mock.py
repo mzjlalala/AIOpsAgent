@@ -18,6 +18,12 @@ _SCENARIO_PLANS: dict[str, list[dict[str, str]]] = {
         {"step_id": "3", "agent": "knowledge", "goal": "检索内存泄漏知识库"},
         {"step_id": "4", "agent": "executor", "goal": "演练重启（dry_run）"},
     ],
+    "auto_ops": [
+        {"step_id": "1", "agent": "metric", "goal": "拉取默认服务核心指标（面板）"},
+        {"step_id": "2", "agent": "log", "goal": "检索近期错误与告警日志"},
+        {"step_id": "3", "agent": "knowledge", "goal": "检索一键巡检与排障手册"},
+        {"step_id": "4", "agent": "executor", "goal": "必要时演练重启（dry_run）"},
+    ],
 }
 
 _SCENARIO_REPORTS: dict[str, str] = {
@@ -28,6 +34,10 @@ _SCENARIO_REPORTS: dict[str, str] = {
     "memory_leak": (
         "内存持续上涨并出现 OOM 风险，疑似泄漏或堆配置过小；"
         "建议抓 heap dump 并评估扩容。"
+    ),
+    "auto_ops": (
+        "一键巡检完成：指标与日志已采集，知识库给出处置建议；"
+        "若存在高风险变更请确认审批后再执行。"
     ),
 }
 

@@ -75,46 +75,22 @@ def test_incident_cpu_high_sse_completed(client: TestClient) -> None:
     assert status.json()["status"] == "completed"
 
 
-def test_incident_memory_leak_approve(client: TestClient) -> None:
+def test_incident_memory_leak_completes(client: TestClient) -> None:
     response = client.post(
         "/incident",
         json={"query": "内存泄漏", "scenario": "memory_leak"},
     )
     events = _parse_sse(response.text)
-    assert events[-1]["type"] == "waiting_approval"
-    wid = events[-1]["workflow_id"]
-
+    types = [e["type"] for e in events]
+    assert "waiting_approval" not in types
+    assert types[-1] == "completed"
+    wid = events[0]["workflow_id"]
     status = client.get(f"/workflows/{wid}")
     assert status.status_code == 200
-    assert status.json()["status"] == "waiting_approval"
-
-    approved = client.post(
-        f"/workflows/{wid}/approve",
-        json={"approved": True},
-    )
-    assert approved.status_code == 200
-    assert approved.json()["status"] == "completed"
-
+    assert status.json()["status"] == "completed"
     ev = client.get(f"/workflows/{wid}/events")
     assert ev.status_code == 200
-    ev_events = _parse_sse(ev.text)
-    assert ev_events[0]["type"] == "snapshot"
-    assert any(e["type"] == "completed" for e in ev_events)
-
-
-def test_incident_memory_leak_reject(client: TestClient) -> None:
-    response = client.post(
-        "/incident",
-        json={"query": "内存泄漏", "scenario": "memory_leak"},
-    )
-    events = _parse_sse(response.text)
-    wid = events[-1]["workflow_id"]
-    rejected = client.post(
-        f"/workflows/{wid}/approve",
-        json={"approved": False, "comment": "危险"},
-    )
-    assert rejected.status_code == 200
-    assert rejected.json()["status"] == "completed_with_failures"
+    assert any(e["type"] == "completed" for e in _parse_sse(ev.text))
 
 
 def test_workflow_not_found(client: TestClient) -> None:
@@ -145,3 +121,19 @@ def test_approve_conflict_when_not_waiting(client: TestClient) -> None:
 def test_incident_validation_error(client: TestClient) -> None:
     response = client.post("/incident", json={"query": ""})
     assert response.status_code == 422
+
+
+def test_one_click_ops_completes(client: TestClient) -> None:
+    response = client.post("/ops/one-click", json={})
+    assert response.status_code == 200
+    assert "text/event-stream" in response.headers["content-type"]
+    events = _parse_sse(response.text)
+    types = [e["type"] for e in events]
+    messages = [e.get("message", "") for e in events]
+    assert any("Planning" in m for m in messages)
+    assert any("Query Metrics" in m for m in messages)
+    assert any("Searching Logs" in m for m in messages)
+    assert any("Searching Knowledge" in m for m in messages)
+    assert "waiting_approval" not in types
+    assert types[-1] == "completed"
+    assert events[-1]["payload"].get("status") == "completed"

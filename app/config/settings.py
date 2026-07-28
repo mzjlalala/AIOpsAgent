@@ -54,10 +54,37 @@ class Settings(BaseSettings):
         description="是否将 SQL 语句输出到日志。",
     )
 
+    # LLM（OpenAI 兼容；默认 mock 保证单测/无密钥可跑）
+    llm_provider: str = Field(
+        default="mock",
+        description="mock | openai_compatible（DeepSeek/Qwen/OpenAI 等）。",
+    )
+    llm_api_key: str | None = Field(default=None, description="LLM API Key。")
+    llm_base_url: str = Field(
+        default="https://api.deepseek.com",
+        description="OpenAI 兼容 API Base URL。",
+    )
+    llm_model: str = Field(
+        default="deepseek-chat",
+        description="模型名，如 deepseek-v4-pro / deepseek-chat。",
+    )
+    llm_timeout_seconds: float = Field(
+        default=60.0,
+        gt=0,
+        description="LLM HTTP 超时秒数。",
+    )
+
     @field_validator("database_url_sync", mode="before")
     @classmethod
     def _empty_sync_url_to_none(cls, value: object) -> object:
         """空字符串视为未配置。"""
+        if value == "":
+            return None
+        return value
+
+    @field_validator("llm_api_key", mode="before")
+    @classmethod
+    def _empty_llm_key_to_none(cls, value: object) -> object:
         if value == "":
             return None
         return value

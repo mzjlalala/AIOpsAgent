@@ -5,7 +5,7 @@
 基于大语言模型 + Agent Workflow + RAG + MCP，支持故障分析、指标/日志排查、
 知识库检索、人工审批后的自动化操作，以及事故复盘报告生成。
 
-> 当前进度：**第九阶段 — API（Incident / Approval / SSE）**。
+> 当前进度：**一键运维（auto_ops）+ 第九阶段 API / 演示前端**。
 
 ## 技术栈（截至本阶段）
 
@@ -19,7 +19,8 @@
 - Memory：能力组合 Backend + Conversation/Session/Long/Experience + `MemoryManager`
 - Agents：LangGraph **1.x**（StateGraph + START/END + conditional_edges，不用 AgentExecutor）+ MockLLM
 - Workflow：Plan-Execute 外层引擎 + MemorySaver + `interrupt`/`Command(resume)` 审批闸门
-- API：`POST /incident`（SSE）+ `/workflows/{id}` 状态/审批/事件续订
+- API：`POST /incident`（SSE）+ `/ops/one-click` + `/workflows/{id}` 状态/审批/事件续订
+- LLM：默认 Mock；可通过 `.env` 切换 OpenAI 兼容（DeepSeek 等）
 - Web：Vue 3 + Vite 演示控制台（`web/`，proxy 联调）
 - uv（依赖与虚拟环境）
 - pytest / aiosqlite / Ruff / Black / isort
@@ -38,7 +39,18 @@ uv sync --group dev
 cp .env.example .env
 ```
 
-按需修改 `.env` 中的 `APP_ENV`、`DATABASE_URL`、`API_PORT` 等。
+按需修改 `.env` 中的 `APP_ENV`、`DATABASE_URL`、`API_PORT`、以及 LLM 配置等。
+
+接入 DeepSeek（OpenAI 兼容）示例：
+
+```env
+LLM_PROVIDER=openai_compatible
+LLM_API_KEY=你的密钥
+LLM_BASE_URL=https://api.deepseek.com
+LLM_MODEL=deepseek-v4-pro
+```
+
+密钥只放在本地 `.env`（已 gitignore），不要提交到仓库。
 
 ### 3. 启动服务
 
@@ -97,13 +109,14 @@ npm run dev
 ```
 
 浏览器打开 http://127.0.0.1:5173（需后端已在 `:8000` 运行）。  
-可切换 `cpu_high` / `memory_leak` 场景；后者会在闸门处出现审批按钮。
+主按钮 **一键运维** 调用 `POST /ops/one-click`（Agent 自主巡检，无需填描述、无需审批）。  
+「高级选项」仍可自定义描述 / scenario。
 
 ## 目录结构
 
 ```
 app/
-  api/           # HTTP：/health /incident /workflows
+  api/           # HTTP：/health /incident /ops/one-click /workflows
   db/            # Base / Session / Mixins
   models/        # SQLAlchemy ORM（15 张表）
   repositories/  # Async Repository

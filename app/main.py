@@ -11,6 +11,7 @@ from loguru import logger
 
 from app.api.health import router as health_router
 from app.api.incident import router as incident_router
+from app.api.ops import router as ops_router
 from app.api.workflows import router as workflows_router
 from app.config.logging import setup_logging
 from app.config.settings import Settings, get_settings
@@ -22,14 +23,24 @@ from app.workflows.factory import build_workflow_engine
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """应用生命周期：注入共享 MemorySaver WorkflowEngine。"""
     checkpointer = MemorySaver()
-    engine = build_workflow_engine(checkpointer=checkpointer, with_memory=False)
+    settings: Settings = app.state.settings
+    engine = build_workflow_engine(
+        checkpointer=checkpointer,
+        with_memory=False,
+        settings=settings,
+    )
     app.state.workflow_checkpointer = checkpointer
     app.state.workflow_engine = engine
     app.state.incident_service = IncidentService(
         checkpointer=checkpointer,
         default_engine=engine,
+        settings=settings,
     )
-    logger.info("OpsAgent starting")
+    logger.info(
+        "OpsAgent starting | llm_provider={} model={}",
+        settings.llm_provider,
+        settings.llm_model,
+    )
     yield
     logger.info("OpsAgent shutting down")
 
@@ -56,6 +67,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.settings = resolved
     application.include_router(health_router)
     application.include_router(incident_router)
+    application.include_router(ops_router)
     application.include_router(workflows_router)
     return application
 

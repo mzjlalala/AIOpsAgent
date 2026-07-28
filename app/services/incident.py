@@ -6,6 +6,7 @@ import uuid
 from collections.abc import AsyncIterator
 from typing import Any
 
+from app.config.settings import Settings
 from app.schemas.sse import SseEvent
 from app.services.sse_map import map_update_to_events
 from app.workflows.engine import WorkflowEngine, WorkflowNotFoundError
@@ -21,9 +22,11 @@ class IncidentService:
         *,
         checkpointer: Any,
         default_engine: WorkflowEngine,
+        settings: Settings | None = None,
     ) -> None:
         self.checkpointer = checkpointer
         self.default_engine = default_engine
+        self.settings = settings
 
     def engine_for_scenario(self, scenario: str | None) -> WorkflowEngine:
         """按 scenario 构建引擎；始终复用同一 MemorySaver。"""
@@ -33,6 +36,7 @@ class IncidentService:
             scenario=scenario,
             checkpointer=self.checkpointer,
             with_memory=False,
+            settings=self.settings,
         )
 
     async def stream_incident(
@@ -60,6 +64,25 @@ class IncidentService:
                 message=str(exc) or exc.__class__.__name__,
                 payload={"error": str(exc)},
             )
+
+    async def stream_one_click(
+        self,
+        *,
+        service: str | None = None,
+        workflow_id: str | None = None,
+    ) -> AsyncIterator[SseEvent]:
+        """一键运维：固定巡检目标 + auto_ops 自主计划。"""
+        svc = (service or "api").strip() or "api"
+        query = (
+            f"对服务 {svc} 执行一键健康巡检：查看指标与日志，"
+            "检索知识库，必要时演练操作并给出结论。"
+        )
+        async for event in self.stream_incident(
+            query=query,
+            scenario="auto_ops",
+            workflow_id=workflow_id,
+        ):
+            yield event
 
     async def get_status(self, workflow_id: str) -> WorkflowRun:
         return await self.default_engine.get_status(workflow_id)

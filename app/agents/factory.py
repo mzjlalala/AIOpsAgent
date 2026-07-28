@@ -7,8 +7,9 @@ from typing import Any
 from app.agents.events import AgentEventBus, NoopEventBus
 from app.agents.graph import build_incident_graph
 from app.agents.runtime import AgentConfig, AgentRuntime
+from app.config.settings import Settings
 from app.memory.factory import build_memory_manager
-from app.providers.llm.mock import MockLLMProvider
+from app.providers.llm.factory import build_llm_provider
 from app.rag.factory import build_rag_bundle
 from app.tools.factory import build_mock_registry
 
@@ -20,8 +21,9 @@ def build_agent_runtime(
     config: AgentConfig | None = None,
     scenario: str | None = None,
     event_bus: AgentEventBus | None = None,
+    settings: Settings | None = None,
 ) -> AgentRuntime:
-    """默认 MockLLM + Mock Tools；可选 Memory / RAG / EventBus。"""
+    """按 Settings 注入 LLM（默认 Mock）+ Mock Tools；可选 Memory / RAG / EventBus。"""
     cfg = config or AgentConfig()
     if scenario is not None:
         cfg = AgentConfig(
@@ -34,7 +36,10 @@ def build_agent_runtime(
     if with_rag:
         rag = build_rag_bundle().retrieve
     return AgentRuntime(
-        llm=MockLLMProvider(scenario=cfg.mock_llm_scenario),
+        llm=build_llm_provider(
+            settings=settings,
+            scenario=cfg.mock_llm_scenario,
+        ),
         tools=build_mock_registry(),
         config=cfg,
         memory=build_memory_manager() if with_memory else None,

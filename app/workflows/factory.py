@@ -24,6 +24,7 @@ def build_workflow_engine(
     timeout: TimeoutPolicy | None = None,
     fallback: FallbackPolicy | None = None,
     forced_failures: int = 0,
+    settings: Any | None = None,
 ) -> WorkflowEngine:
     """构建 WorkflowEngine；checkpointer 默认 MemorySaver（必选）。"""
     rt = runtime or build_agent_runtime(
@@ -31,6 +32,7 @@ def build_workflow_engine(
         with_rag=False,
         config=config,
         scenario=scenario,
+        settings=settings,
     )
     saver = checkpointer if checkpointer is not None else MemorySaver()
     graph = build_plan_execute_graph(

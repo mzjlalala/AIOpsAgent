@@ -1,4 +1,4 @@
-"""Phase8 Plan-Execute / Approval 单测。"""
+"""Phase8 Plan-Execute 单测（默认无审批）。"""
 
 from __future__ import annotations
 
@@ -15,24 +15,21 @@ from app.workflows.policies import (
 )
 
 
-def test_normalize_executor_default_requires_approval() -> None:
+def test_normalize_default_no_approval() -> None:
     raw = {"step_id": "4", "agent": "executor", "goal": "演练重启"}
     out = normalize_step_approval(raw)
-    assert out["requires_approval"] is True
-    steps = normalize_plan([raw])
-    assert steps[0].requires_approval is True
+    assert out["requires_approval"] is False
+    assert normalize_plan([raw])[0].requires_approval is False
 
 
-def test_normalize_executor_explicit_false() -> None:
+def test_normalize_explicit_true_kept() -> None:
     raw = {
         "step_id": "4",
         "agent": "executor",
         "goal": "演练重启",
-        "requires_approval": False,
+        "requires_approval": True,
     }
-    out = normalize_step_approval(raw)
-    assert out["requires_approval"] is False
-    assert normalize_plan([raw])[0].requires_approval is False
+    assert normalize_step_approval(raw)["requires_approval"] is True
 
 
 def test_normalize_non_executor_default_false() -> None:
@@ -72,53 +69,40 @@ async def test_workflow_no_approval_completed() -> None:
 
 
 @pytest.mark.asyncio
-async def test_mock_llm_executor_hits_approval_gate() -> None:
+async def test_memory_leak_completes_without_gate() -> None:
     engine = build_workflow_engine(scenario="memory_leak", with_memory=False)
     run = await engine.start(user_query="内存泄漏")
-    assert run.status == "waiting_approval"
-    assert run.pending_approval is not None
-    assert run.pending_approval.get("agent") == "executor"
-    status = await engine.get_status(run.workflow_id)
-    assert status.status == "waiting_approval"
-    # plan/artifacts 经 MemorySaver 保留
-    assert len(status.plan_steps) == 4
-    assert any(s["status"] == "success" for s in status.plan_steps)
+    assert run.status == "completed"
+    assert all(s["status"] == "success" for s in run.plan_steps)
+    assert any(s["agent"] == "executor" for s in run.plan_steps)
 
 
 @pytest.mark.asyncio
-async def test_resume_approve_continues() -> None:
-    engine = build_workflow_engine(scenario="memory_leak", with_memory=False)
-    run = await engine.start(user_query="内存泄漏")
-    assert run.status == "waiting_approval"
-    done = await engine.resume(run.workflow_id, approved=True)
-    assert done.status == "completed"
-    assert all(s["status"] == "success" for s in done.plan_steps)
-
-
-@pytest.mark.asyncio
-async def test_resume_reject_completed_with_failures() -> None:
-    engine = build_workflow_engine(scenario="memory_leak", with_memory=False)
-    run = await engine.start(user_query="内存泄漏")
-    done = await engine.resume(run.workflow_id, approved=False, comment="危险")
-    assert done.status == "completed_with_failures"
-    by_agent = {s["agent"]: s["status"] for s in done.plan_steps}
-    assert by_agent["executor"] == "failed"
-    assert by_agent["metric"] == "success"
-
-
-@pytest.mark.asyncio
-async def test_explicit_false_skips_approval() -> None:
+async def test_explicit_approval_still_gates() -> None:
     plan = [
         {"step_id": "1", "agent": "metric", "goal": "指标"},
         {
             "step_id": "2",
             "agent": "executor",
             "goal": "重启",
-            "requires_approval": False,
+            "requires_approval": True,
         },
     ]
     engine = build_workflow_engine(scenario="cpu_high", with_memory=False)
-    run = await engine.start(user_query="显式跳过审批", plan_steps=plan)
+    run = await engine.start(user_query="显式审批", plan_steps=plan)
+    assert run.status == "waiting_approval"
+    done = await engine.resume(run.workflow_id, approved=True)
+    assert done.status == "completed"
+
+
+@pytest.mark.asyncio
+async def test_executor_runs_without_explicit_false() -> None:
+    plan = [
+        {"step_id": "1", "agent": "metric", "goal": "指标"},
+        {"step_id": "2", "agent": "executor", "goal": "重启"},
+    ]
+    engine = build_workflow_engine(scenario="cpu_high", with_memory=False)
+    run = await engine.start(user_query="无审批执行", plan_steps=plan)
     assert run.status == "completed"
     assert all(s["status"] == "success" for s in run.plan_steps)
 

@@ -1,4 +1,4 @@
-export type Scenario = "cpu_high" | "memory_leak";
+export type Scenario = "cpu_high" | "memory_leak" | "auto_ops";
 
 export type SseEventType =
   | "step_started"
@@ -41,6 +41,27 @@ export async function streamIncident(
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
     body: JSON.stringify({ query, scenario }),
+    signal,
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `HTTP ${response.status}`);
+  }
+  if (!response.body) {
+    throw new Error("响应无 body，无法读取 SSE");
+  }
+  await readSseStream(response.body, onEvent, signal);
+}
+
+export async function streamOneClick(
+  onEvent: (event: SseEvent) => void,
+  signal?: AbortSignal,
+  service?: string,
+): Promise<void> {
+  const response = await fetch("/ops/one-click", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+    body: JSON.stringify({ service: service || null }),
     signal,
   });
   if (!response.ok) {
