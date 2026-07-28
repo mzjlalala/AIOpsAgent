@@ -28,6 +28,10 @@ dev = [
     "isort>=5.13.0",
     "aiosqlite>=0.20.0",
 ]
+faiss = [
+    "faiss-cpu>=1.8.0",
+    "numpy>=2.0.0",
+]
 
 [build-system]
 requires = ["hatchling"]

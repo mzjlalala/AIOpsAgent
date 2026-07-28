@@ -5,7 +5,7 @@
 基于大语言模型 + Agent Workflow + RAG + MCP，支持故障分析、指标/日志排查、
 知识库检索、人工审批后的自动化操作，以及事故复盘报告生成。
 
-> 当前进度：**第四阶段 — Mock Tool 实现**。
+> 当前进度：**第五阶段 — Embedding Provider + RAG**。
 
 ## 技术栈（截至本阶段）
 
@@ -14,6 +14,8 @@
 - SQLAlchemy 2.x（async）+ asyncmy / Alembic + PyMySQL
 - Tool 抽象：`ainvoke` / `_execute` / ToolRegistry / MCP Adapter 接口
 - Mock Tool：`mock.metric` / `mock.log` / `mock.executor` / `mock.knowledge` + `build_mock_registry()`
+- Embedding：`EmbeddingProvider` + sha256 `MockEmbeddingProvider`
+- RAG：Ingest/Retrieve 分层流水线、InMemory VectorStore、可选 FAISS adapter（`uv sync --group faiss`）
 - uv（依赖与虚拟环境）
 - pytest / aiosqlite / Ruff / Black / isort
 
@@ -76,11 +78,11 @@ app/
   adapters/      # MCP 等外部适配器接口
   agents/        # Multi-Agent（后续阶段）
   workflows/     # LangGraph 工作流（后续阶段）
-  rag/           # RAG 流水线（后续阶段；Knowledge Mock 已对齐字段）
+  rag/           # RAG：models / ingest / retrieve / store / adapters
   memory/        # 记忆系统（后续阶段）
   services/      # 领域服务（后续阶段）
   prompts/       # Prompt Markdown 文件
-  providers/     # LLM / Embedding Provider
+  providers/     # LLM / Embedding Provider（含 Mock Embedding）
   config/        # Settings + Logging
   schemas/       # Pydantic schemas
   utils/         # 公共工具
@@ -93,8 +95,8 @@ tests/           # pytest
 1. 项目初始化
 2. MySQL Schema / SQLAlchemy / Repository
 3. Tool 接口设计
-4. Mock Tool 实现（当前）
-5. Embedding Provider + RAG
+4. Mock Tool 实现
+5. Embedding Provider + RAG（当前）
 6. Memory 系统
 7. LangGraph Multi-Agent
 8. Workflow（Plan-Execute / Approval）
