@@ -31,7 +31,7 @@ Date: 2026-07-28
 {"action":"final","content":"（可省略；若走流式最终答则本轮可不返回 content）"}
 ```
 
-当 `action` 为 `final`（或非 JSON / 无法解析为 tool）时，进入最终回答阶段：用对话历史 + 工具观察再 `astream` 生成面向用户的 Markdown 回复。
+当 `action` 为 `final`、或输出非 JSON、或无法解析为合法 `tool` 动作时，进入最终回答阶段：用对话历史 + 工具观察再 `astream` 生成面向用户的 Markdown 回复。`final.content` 若存在可忽略——终答一律走流式生成，避免双通道不一致。
 
 ### 工具 args 约定
 
@@ -41,7 +41,7 @@ Date: 2026-07-28
 | `mock.metric` | `query`（或 `service`/`metric_name` 文本） | `MetricInstantQuery`（缺省合理默认） |
 | `mock.log` | `query`, `service?` | `LogSearchQuery` |
 
-未知 tool 名 → SSE `error` 或跳过并写入 observation「未知工具」，计入一轮。
+未知 tool 名：不发 SSE `error`；写入 observation「未知工具」，计入一轮后继续循环。
 
 ## SSE 事件
 
