@@ -9,7 +9,7 @@ from pydantic import BaseModel, ValidationError
 
 from app.tools.base import BaseTool
 from app.tools.context import ToolContext
-from app.tools.results import ToolResult
+from app.tools.results import ToolMetadata, ToolResult
 from app.tools.runtime import RuntimeDependencies
 from app.tools.types import ToolCategory, ToolOutput
 
@@ -98,6 +98,8 @@ class _TimeoutTool(BaseTool):
 
 
 class _FlakyTool(BaseTool):
+    """先失败后成功，用于验证重试成功路径。"""
+
     name = "flaky"
     description = "fails then succeeds"
     category = ToolCategory.KNOWLEDGE
@@ -128,6 +130,87 @@ class _FlakyTool(BaseTool):
         if self.calls < 2:
             raise RuntimeError("transient")
         return {"ok": True, "calls": self.calls}
+
+
+class _AlwaysFailTool(BaseTool):
+    """始终失败，用于验证重试耗尽。"""
+
+    name = "always_fail"
+    description = "always fail"
+    category = ToolCategory.METRIC
+    timeout_seconds = 1.0
+    max_retries = 2
+    retry_interval_seconds = 0.01
+
+    def __init__(self) -> None:
+        self.calls = 0
+        self.errors = 0
+
+    async def on_error(
+        self,
+        request: BaseModel,
+        context: ToolContext,
+        runtime: RuntimeDependencies,
+        exc: Exception,
+    ) -> None:
+        self.errors += 1
+
+    async def _execute(
+        self,
+        request: BaseModel,
+        context: ToolContext,
+        runtime: RuntimeDependencies,
+    ) -> ToolOutput:
+        self.calls += 1
+        raise RuntimeError("permanent failure")
+
+
+class _BeforeFailTool(BaseTool):
+    """before Hook 失败。"""
+
+    name = "before_fail"
+    description = "before fail"
+    category = ToolCategory.LOG
+    timeout_seconds = 1.0
+
+    def __init__(self) -> None:
+        self.executed = False
+        self.hooks: list[str] = []
+
+    async def before(
+        self,
+        request: BaseModel,
+        context: ToolContext,
+        runtime: RuntimeDependencies,
+    ) -> None:
+        raise RuntimeError("before boom")
+
+    async def on_result(
+        self,
+        request: BaseModel,
+        context: ToolContext,
+        runtime: RuntimeDependencies,
+        result: ToolResult,
+    ) -> None:
+        self.hooks.append("on_result")
+
+    async def after(
+        self,
+        request: BaseModel,
+        context: ToolContext,
+        runtime: RuntimeDependencies,
+        result: ToolResult,
+    ) -> None:
+        self.hooks.append("after")
+
+    async def _execute(
+        self,
+        request: BaseModel,
+        context: ToolContext,
+        runtime: RuntimeDependencies,
+    ) -> ToolOutput:
+        self.executed = True
+        return {"ok": True}
 
 
 @pytest.mark.asyncio
@@ -179,10 +262,60 @@ async def test_ainvoke_retry_then_success() -> None:
     assert result.metadata.attempt == 2
 
 
+@pytest.mark.asyncio
+async def test_ainvoke_retry_exhausted() -> None:
+    tool = _AlwaysFailTool()
+    result = await tool.ainvoke(
+        _EchoRequest(value="x"), context=ToolContext(trace_id="t-exhausted")
+    )
+
+    assert result.success is False
+    assert result.trace_id == "t-exhausted"
+    assert tool.calls == 3
+    assert tool.errors == 3
+    assert result.metadata.attempt == 3
+    assert result.error is not None
+    assert "重试耗尽" in result.error
+
+
+@pytest.mark.asyncio
+async def test_ainvoke_before_failure() -> None:
+    tool = _BeforeFailTool()
+    result = await tool.ainvoke(_EchoRequest(value="x"))
+
+    assert result.success is False
+    assert tool.executed is False
+    assert result.error is not None
+    assert "before hook failed" in result.error
+    assert tool.hooks == ["on_result", "after"]
+
+
 def test_tool_context_is_frozen() -> None:
     ctx = ToolContext(trace_id="t1")
     with pytest.raises(ValidationError):
         ctx.trace_id = "t2"  # type: ignore[misc]
+
+
+def test_tags_are_deeply_immutable() -> None:
+    """外部 dict 修改与 tags.__setitem__ 都不应影响已构造对象。"""
+    raw = {"env": "prod"}
+    ctx = ToolContext(trace_id="t-tags", tags=raw)
+    meta = ToolMetadata(
+        tool_name="x",
+        category=ToolCategory.METRIC,
+        tags=raw,
+    )
+
+    raw["env"] = "dev"
+    assert ctx.tags["env"] == "prod"
+    assert meta.tags["env"] == "prod"
+    assert type(ctx.tags).__name__ == "mappingproxy"
+    assert type(meta.tags).__name__ == "mappingproxy"
+
+    with pytest.raises(TypeError):
+        ctx.tags["env"] = "staging"  # type: ignore[index]
+    with pytest.raises(TypeError):
+        meta.tags["env"] = "staging"  # type: ignore[index]
 
 
 def test_runtime_dependencies_extensions() -> None:

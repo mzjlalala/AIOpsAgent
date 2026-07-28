@@ -8,13 +8,13 @@ import time
 import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable
-from types import MappingProxyType
 
 from loguru import logger
 from pydantic import BaseModel
 
 from app.tools.context import ToolContext
 from app.tools.exceptions import ToolError, ToolRetryExhaustedError, ToolTimeoutError
+from app.tools.immutability import freeze_str_tags
 from app.tools.results import ToolMetadata, ToolResult
 from app.tools.runtime import RuntimeDependencies
 from app.tools.types import ToolCategory, ToolOutput
@@ -238,7 +238,7 @@ class BaseTool(ABC):
             tool_name=self.name,
             category=self.category,
             attempt=attempt,
-            tags=MappingProxyType(dict(context.tags)),
+            tags=freeze_str_tags(context.tags),
         )
 
     def _failure_result(

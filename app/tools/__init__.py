@@ -10,6 +10,7 @@ from app.tools.exceptions import (
     ToolTimeoutError,
 )
 from app.tools.executor import BaseExecutorTool, ExecuteRequest
+from app.tools.immutability import freeze_str_tags
 from app.tools.knowledge import BaseKnowledgeTool, KnowledgeSearchQuery
 from app.tools.log import BaseLogTool, LogSearchQuery
 from app.tools.metric import BaseMetricTool, MetricInstantQuery, MetricRangeQuery
@@ -42,4 +43,5 @@ __all__ = [
     "ToolResult",
     "ToolRetryExhaustedError",
     "ToolTimeoutError",
+    "freeze_str_tags",
 ]
