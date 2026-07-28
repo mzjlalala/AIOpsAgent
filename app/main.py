@@ -9,19 +9,24 @@ from fastapi import FastAPI
 from langgraph.checkpoint.memory import MemorySaver
 from loguru import logger
 
+from app.api.chat import router as chat_router
 from app.api.health import router as health_router
 from app.api.incident import router as incident_router
 from app.api.ops import router as ops_router
 from app.api.workflows import router as workflows_router
 from app.config.logging import setup_logging
 from app.config.settings import Settings, get_settings
+from app.memory.factory import build_memory_manager
+from app.providers.llm.factory import build_llm_provider
+from app.services.chat import ChatService
 from app.services.incident import IncidentService
+from app.tools.factory import build_mock_registry
 from app.workflows.factory import build_workflow_engine
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """应用生命周期：注入共享 MemorySaver WorkflowEngine。"""
+    """应用生命周期：注入 WorkflowEngine / ChatService。"""
     checkpointer = MemorySaver()
     settings: Settings = app.state.settings
     engine = build_workflow_engine(
@@ -35,6 +40,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         checkpointer=checkpointer,
         default_engine=engine,
         settings=settings,
+    )
+    app.state.chat_service = ChatService(
+        llm=build_llm_provider(settings=settings, scenario="auto_ops"),
+        tools=build_mock_registry(),
+        memory=build_memory_manager(),
     )
     logger.info(
         "OpsAgent starting | llm_provider={} model={}",
@@ -66,6 +76,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # 将配置挂到 app.state，便于路由与测试注入
     application.state.settings = resolved
     application.include_router(health_router)
+    application.include_router(chat_router)
     application.include_router(incident_router)
     application.include_router(ops_router)
     application.include_router(workflows_router)

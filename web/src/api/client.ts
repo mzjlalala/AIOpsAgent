@@ -8,6 +8,9 @@ export type SseEventType =
   | "completed"
   | "answer"
   | "answer_delta"
+  | "session"
+  | "tool_call"
+  | "tool_result"
   | "error"
   | "snapshot";
 
@@ -31,6 +34,31 @@ export interface WorkflowRun {
   pending_approval: Record<string, unknown> | null;
   error: string | null;
   current_step_id: string | null;
+}
+
+export async function streamChat(
+  message: string,
+  onEvent: (event: SseEvent) => void,
+  signal?: AbortSignal,
+  conversationId?: string | null,
+): Promise<void> {
+  const response = await fetch("/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+    body: JSON.stringify({
+      message,
+      conversation_id: conversationId || null,
+    }),
+    signal,
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `HTTP ${response.status}`);
+  }
+  if (!response.body) {
+    throw new Error("响应无 body，无法读取 SSE");
+  }
+  await readSseStream(response.body, onEvent, signal);
 }
 
 export async function streamIncident(

@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { streamIncident, streamOneClick, type SseEvent } from "./api/client";
+import { streamChat, streamOneClick, type SseEvent } from "./api/client";
 import ChatMain, { type ChatMessage } from "./components/ChatMain.vue";
 import Sidebar from "./components/Sidebar.vue";
 
 interface SessionState {
   id: string;
   title: string;
+  conversationId: string | null;
   messages: ChatMessage[];
 }
 
@@ -37,6 +38,7 @@ function ensureSession(title: string): SessionState {
   const session: SessionState = {
     id: uid("s"),
     title: title.slice(0, 28) || "新对话",
+    conversationId: null,
     messages: [],
   };
   sessions.value = [session, ...sessions.value];
@@ -80,7 +82,20 @@ function appendAssistantDelta(session: SessionState, delta: string) {
 }
 
 function handleEvent(session: SessionState, ev: SseEvent) {
-  if (ev.type === "step_started" || ev.type === "step_succeeded" || ev.type === "step_failed") {
+  if (ev.type === "session") {
+    const cid = ev.payload.conversation_id;
+    if (typeof cid === "string" && cid) {
+      session.conversationId = cid;
+    }
+    return;
+  }
+  if (
+    ev.type === "step_started" ||
+    ev.type === "step_succeeded" ||
+    ev.type === "step_failed" ||
+    ev.type === "tool_call" ||
+    ev.type === "tool_result"
+  ) {
     pushMessage(session, "progress", ev.message);
     return;
   }
@@ -111,14 +126,16 @@ async function runAsk(text: string, mode: "chat" | "oneClick") {
   if (running.value) return;
   if (mode === "chat" && !content) return;
 
-  const title =
-    mode === "oneClick" ? "一键运维巡检" : content;
+  const title = mode === "oneClick" ? "一键运维巡检" : content;
   const session = ensureSession(title);
   if (!session.title || session.title === "新对话") {
     session.title = title.slice(0, 28);
   }
 
-  const userText = mode === "oneClick" ? "请对默认服务做一键健康巡检，并给出问题判断与解决建议。" : content;
+  const userText =
+    mode === "oneClick"
+      ? "请对默认服务做一键健康巡检，并给出问题判断与解决建议。"
+      : content;
   pushMessage(session, "user", userText);
   draft.value = "";
   running.value = true;
@@ -130,11 +147,11 @@ async function runAsk(text: string, mode: "chat" | "oneClick") {
     if (mode === "oneClick") {
       await streamOneClick((ev) => handleEvent(session, ev), abort.signal);
     } else {
-      await streamIncident(
+      await streamChat(
         content,
-        "auto_ops",
         (ev) => handleEvent(session, ev),
         abort.signal,
+        session.conversationId,
       );
     }
   } catch (err) {

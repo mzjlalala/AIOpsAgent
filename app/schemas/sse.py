@@ -14,6 +14,9 @@ SseEventType = Literal[
     "completed",
     "answer",
     "answer_delta",
+    "session",
+    "tool_call",
+    "tool_result",
     "error",
     "snapshot",
 ]

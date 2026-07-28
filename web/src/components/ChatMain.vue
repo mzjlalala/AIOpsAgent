@@ -121,7 +121,9 @@ function autoGrow() {
         >
           <div class="bubble__role">
             <template v-if="m.role === 'user'">你</template>
-            <template v-else-if="m.role === 'progress'">排查中</template>
+            <template v-else-if="m.role === 'progress'">
+              {{ m.content.includes("调用") || m.content.includes("知识命中") || m.content.includes("指标") || m.content.includes("日志") ? "查阅中" : "排查中" }}
+            </template>
             <template v-else-if="m.role === 'error'">出错</template>
             <template v-else>OpsAgent</template>
           </div>

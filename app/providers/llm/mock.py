@@ -1,12 +1,14 @@
-"""确定性 Mock LLM（按 scenario 返回规划/报告）。"""
+"""确定性 Mock LLM（按 scenario 返回规划/报告；支持 chat Function Calling）。"""
 
 from __future__ import annotations
 
 import asyncio
 import json
-from collections.abc import AsyncIterator
+import re
+from collections.abc import AsyncIterator, Sequence
 
 from app.providers.llm.base import BaseLLMProvider
+from app.providers.llm.types import ChatMessage, LLMCompletion, ToolCall, ToolSpec
 
 _SCENARIO_PLANS: dict[str, list[dict[str, str]]] = {
     "cpu_high": [
@@ -90,3 +92,132 @@ class MockLLMProvider(BaseLLMProvider):
         for i in range(0, len(text), size):
             yield text[i : i + size]
             await asyncio.sleep(0.01)
+
+    async def acomplete_messages(
+        self,
+        messages: Sequence[ChatMessage],
+        *,
+        tools: Sequence[ToolSpec] | None = None,
+        tool_choice: str = "auto",
+    ) -> LLMCompletion:
+        _ = tools, tool_choice
+        if any(m.role == "tool" for m in messages):
+            return LLMCompletion(content=None, tool_calls=[])
+        user_text = _latest_user_text(messages)
+        call = _decide_tool_call(user_text)
+        if call is None:
+            return LLMCompletion(content=None, tool_calls=[])
+        return LLMCompletion(content=None, tool_calls=[call])
+
+    async def astream_messages(
+        self,
+        messages: Sequence[ChatMessage],
+        *,
+        tools: Sequence[ToolSpec] | None = None,
+    ) -> AsyncIterator[str]:
+        _ = tools
+        text = _compose_chat_answer(messages)
+        size = 24
+        for i in range(0, len(text), size):
+            yield text[i : i + size]
+            await asyncio.sleep(0.01)
+
+
+def _latest_user_text(messages: Sequence[ChatMessage]) -> str:
+    for msg in reversed(messages):
+        if msg.role == "user" and msg.content:
+            return msg.content
+    return ""
+
+
+def _decide_tool_call(user_text: str) -> ToolCall | None:
+    text = user_text.strip()
+    if not text:
+        return None
+    lower = text.lower()
+    needs_ops = any(
+        key in text or key in lower
+        for key in (
+            "cpu",
+            "CPU",
+            "内存",
+            "指标",
+            "metric",
+            "日志",
+            "log",
+            "知识",
+            "手册",
+            "怎么解决",
+            "排查",
+            "告警",
+            "OOM",
+            "oom",
+        )
+    )
+    if not needs_ops:
+        return None
+    if any(k in text or k in lower for k in ("日志", "log", "error", "报错")) and not any(
+        k in text for k in ("怎么解决", "知识", "手册")
+    ):
+        return ToolCall(
+            id="call_mock_log",
+            name="mock.log",
+            arguments={"service": "api", "keyword": text[:40]},
+        )
+    if any(k in text or k in lower for k in ("指标", "metric")) and "怎么" not in text:
+        return ToolCall(
+            id="call_mock_metric",
+            name="mock.metric",
+            arguments={"metric": "cpu_usage", "service": "api"},
+        )
+    # 默认 /「怎么解决」优先知识库（验收：cpu 高怎么解决）
+    return ToolCall(
+        id="call_mock_knowledge",
+        name="mock.knowledge",
+        arguments={"query": text, "top_k": 3},
+    )
+
+
+def _compose_chat_answer(messages: Sequence[ChatMessage]) -> str:
+    user_text = _latest_user_text(messages)
+    name = _find_stated_name(messages)
+    tool_bits = [
+        (m.content or "")
+        for m in messages
+        if m.role == "tool" and m.content
+    ]
+    if tool_bits:
+        evidence = "\n".join(tool_bits)[:800]
+        return (
+            "## 问题判断\n"
+            f"已根据工具结果分析你的问题：{user_text}\n\n"
+            "## 参考证据\n"
+            f"{evidence}\n\n"
+            "## 解决建议\n"
+            "1. 对照知识库/指标结论定位热点；2. 观察近期发布与流量；"
+            "3. 必要时在低峰做限流或滚动重启演练。"
+        )
+    if any(k in user_text for k in ("叫什么", "我的名字", "我刚才说")):
+        if name:
+            return f"你刚才说你叫 **{name}**。"
+        return "我这边还没记下你的名字，可以再说一次吗？"
+    if name and ("我叫" in user_text or "我是" in user_text):
+        return f"你好，{name}！我是 OpsAgent，有运维问题随时问我。"
+    if "我叫" in user_text or "我是" in user_text:
+        m = re.search(r"我叫\s*([^\s，。！？,.!?]{1,32})", user_text)
+        if m:
+            return f"你好，{m.group(1)}！我是 OpsAgent，有运维问题随时问我。"
+    return (
+        f"收到：{user_text}\n\n"
+        "我是运维助手。可以直接问故障现象，或点「一键运维巡检」。"
+    )
+
+
+def _find_stated_name(messages: Sequence[ChatMessage]) -> str | None:
+    for msg in messages:
+        if msg.role != "user" or not msg.content:
+            continue
+        m = re.search(r"我叫\s*([^\s，。！？,.!?]{1,32})", msg.content)
+        if m:
+            return m.group(1)
+    return None

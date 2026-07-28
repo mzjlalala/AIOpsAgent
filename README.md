@@ -19,7 +19,7 @@
 - Memory：能力组合 Backend + Conversation/Session/Long/Experience + `MemoryManager`
 - Agents：LangGraph **1.x**（StateGraph + START/END + conditional_edges，不用 AgentExecutor）+ MockLLM
 - Workflow：Plan-Execute 外层引擎 + MemorySaver + `interrupt`/`Command(resume)` 审批闸门
-- API：`POST /incident`（SSE）+ `/ops/one-click` + `/workflows/{id}` 状态/审批/事件续订
+- API：`POST /chat`（SSE 对话 + Function Calling）+ `POST /incident`（SSE）+ `/ops/one-click` + `/workflows/{id}` 状态/审批/事件续订
 - LLM：默认 Mock；可通过 `.env` 切换 OpenAI 兼容（DeepSeek 等）
 - Web：Vue 3 + Vite 演示控制台（`web/`，proxy 联调）
 - uv（依赖与虚拟环境）
@@ -115,7 +115,7 @@ npm run dev
 
 ```
 app/
-  api/           # HTTP：/health /incident /ops/one-click /workflows
+  api/           # HTTP：/health /chat /incident /ops/one-click /workflows
   db/            # Base / Session / Mixins
   models/        # SQLAlchemy ORM（15 张表）
   repositories/  # Async Repository
