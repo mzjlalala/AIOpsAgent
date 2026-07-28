@@ -5,8 +5,9 @@ from __future__ import annotations
 import math
 from collections.abc import Sequence
 
-from app.rag.models import DocumentChunk, MetadataFilter
+from app.rag.models import DocumentChunk
 from app.rag.store.base import VectorStore, VectorStoreError
+from app.schemas.filters import MetadataFilter
 from app.tools.types import JsonValue
 
 

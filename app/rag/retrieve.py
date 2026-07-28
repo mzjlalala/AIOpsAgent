@@ -5,9 +5,10 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from app.providers.embedding.base import EmbeddingProvider
-from app.rag.models import Citation, MetadataFilter, RetrievedHit, RetrieveResult
+from app.rag.models import Citation, RetrievedHit, RetrieveResult
 from app.rag.reranker import Reranker
 from app.rag.retriever import Retriever
+from app.schemas.filters import MetadataFilter
 
 
 class RetrievePipeline:

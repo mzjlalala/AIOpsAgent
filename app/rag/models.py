@@ -4,7 +4,18 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from app.schemas.filters import MetadataFilter
 from app.tools.types import JsonValue
+
+__all__ = [
+    "Citation",
+    "Document",
+    "DocumentChunk",
+    "MetadataFilter",
+    "RawDocument",
+    "RetrieveResult",
+    "RetrievedHit",
+]
 
 
 class RawDocument(BaseModel):
@@ -75,11 +86,3 @@ class RetrieveResult(BaseModel):
     namespace: str | None = None
     hits: list[RetrievedHit] = Field(default_factory=list)
     citations: list[Citation] = Field(default_factory=list)
-
-
-class MetadataFilter(BaseModel):
-    """元数据过滤条件；本阶段 VectorStore 仅实现 eq。"""
-
-    field: str
-    operator: str = "eq"
-    value: JsonValue

@@ -5,7 +5,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 
-from app.rag.models import DocumentChunk, MetadataFilter
+from app.rag.models import DocumentChunk
+from app.schemas.filters import MetadataFilter
 
 
 class VectorStoreError(Exception):

@@ -5,7 +5,7 @@
 基于大语言模型 + Agent Workflow + RAG + MCP，支持故障分析、指标/日志排查、
 知识库检索、人工审批后的自动化操作，以及事故复盘报告生成。
 
-> 当前进度：**第五阶段 — Embedding Provider + RAG**。
+> 当前进度：**第六阶段 — Memory 系统**。
 
 ## 技术栈（截至本阶段）
 
@@ -15,7 +15,8 @@
 - Tool 抽象：`ainvoke` / `_execute` / ToolRegistry / MCP Adapter 接口
 - Mock Tool：`mock.metric` / `mock.log` / `mock.executor` / `mock.knowledge` + `build_mock_registry()`
 - Embedding：`EmbeddingProvider` + sha256 `MockEmbeddingProvider`
-- RAG：Ingest/Retrieve 分层流水线、InMemory VectorStore、可选 FAISS adapter（`uv sync --group faiss`）
+- RAG：Ingest/Retrieve 分层流水线、InMemory VectorStore、可选 FAISS adapter
+- Memory：能力组合 Backend + Conversation/Session/Long/Experience + `MemoryManager`
 - uv（依赖与虚拟环境）
 - pytest / aiosqlite / Ruff / Black / isort
 
@@ -79,12 +80,12 @@ app/
   agents/        # Multi-Agent（后续阶段）
   workflows/     # LangGraph 工作流（后续阶段）
   rag/           # RAG：models / ingest / retrieve / store / adapters
-  memory/        # 记忆系统（后续阶段）
+  memory/        # Memory：能力组合 Backend + Manager
   services/      # 领域服务（后续阶段）
   prompts/       # Prompt Markdown 文件
   providers/     # LLM / Embedding Provider（含 Mock Embedding）
   config/        # Settings + Logging
-  schemas/       # Pydantic schemas
+  schemas/       # Pydantic schemas（含共享 MetadataFilter）
   utils/         # 公共工具
 alembic/         # 数据库迁移
 tests/           # pytest
@@ -96,8 +97,8 @@ tests/           # pytest
 2. MySQL Schema / SQLAlchemy / Repository
 3. Tool 接口设计
 4. Mock Tool 实现
-5. Embedding Provider + RAG（当前）
-6. Memory 系统
+5. Embedding Provider + RAG
+6. Memory 系统（当前）
 7. LangGraph Multi-Agent
 8. Workflow（Plan-Execute / Approval）
 9. API 接口（Chat / Incident / SSE）

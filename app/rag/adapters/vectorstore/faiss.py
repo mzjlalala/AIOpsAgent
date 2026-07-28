@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from app.rag.models import DocumentChunk, MetadataFilter
+from app.rag.models import DocumentChunk
 from app.rag.store.base import VectorStore, VectorStoreError
 from app.rag.store.memory import InMemoryVectorStore
+from app.schemas.filters import MetadataFilter
 
 
 def _require_faiss() -> object:
