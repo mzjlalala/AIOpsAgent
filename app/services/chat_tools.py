@@ -13,7 +13,12 @@ from app.tools.log import LogSearchQuery
 from app.tools.metric import MetricInstantQuery
 from app.tools.registry import ToolRegistry
 
-CHAT_TOOL_NAMES: tuple[str, ...] = ("mock.knowledge", "mock.metric", "mock.log")
+CHAT_TOOL_REGISTRY_NAMES: dict[str, str] = {
+    "mock_knowledge": "mock.knowledge",
+    "mock_metric": "mock.metric",
+    "mock_log": "mock.log",
+}
+CHAT_TOOL_NAMES: tuple[str, ...] = tuple(CHAT_TOOL_REGISTRY_NAMES)
 
 
 def build_chat_tool_specs() -> list[ToolSpec]:
@@ -21,7 +26,7 @@ def build_chat_tool_specs() -> list[ToolSpec]:
     return [
         ToolSpec(
             function=ToolFunctionSpec(
-                name="mock.knowledge",
+                name="mock_knowledge",
                 description="检索运维知识库与排障手册。",
                 parameters={
                     "type": "object",
@@ -39,7 +44,7 @@ def build_chat_tool_specs() -> list[ToolSpec]:
         ),
         ToolSpec(
             function=ToolFunctionSpec(
-                name="mock.metric",
+                name="mock_metric",
                 description="查询瞬时监控指标。",
                 parameters={
                     "type": "object",
@@ -56,7 +61,7 @@ def build_chat_tool_specs() -> list[ToolSpec]:
         ),
         ToolSpec(
             function=ToolFunctionSpec(
-                name="mock.log",
+                name="mock_log",
                 description="检索服务日志。",
                 parameters={
                     "type": "object",
@@ -79,15 +84,16 @@ async def dispatch_chat_tool(
     call: ToolCall,
 ) -> tuple[str, dict[str, Any]]:
     """执行白名单工具，返回 (摘要, 精简 data)。"""
-    if call.name not in CHAT_TOOL_NAMES:
+    registry_name = CHAT_TOOL_REGISTRY_NAMES.get(call.name)
+    if registry_name is None:
         return f"未知或未授权工具: {call.name}", {}
-    if call.name not in registry:
-        return f"工具未注册: {call.name}", {}
+    if registry_name not in registry:
+        return f"工具未注册: {registry_name}", {}
 
     ctx = ToolContext(trace_id=f"chat-{call.id}")
     try:
         request = _build_request(call)
-        result = await registry.get(call.name).ainvoke(request, context=ctx)
+        result = await registry.get(registry_name).ainvoke(request, context=ctx)
     except Exception as exc:  # noqa: BLE001 — 转为 tool observation
         return f"工具调用失败: {exc}", {"error": str(exc)}
 
@@ -102,7 +108,7 @@ async def dispatch_chat_tool(
 
 def _build_request(call: ToolCall) -> Any:
     args = call.arguments or {}
-    if call.name == "mock.knowledge":
+    if call.name == "mock_knowledge":
         top_k = args.get("top_k", 3)
         try:
             top_k_int = int(top_k)
@@ -112,7 +118,7 @@ def _build_request(call: ToolCall) -> Any:
             query=str(args.get("query") or ""),
             top_k=max(1, min(top_k_int, 50)),
         )
-    if call.name == "mock.metric":
+    if call.name == "mock_metric":
         service = args.get("service")
         labels = {"service": str(service)} if service else {}
         return MetricInstantQuery(
@@ -120,7 +126,7 @@ def _build_request(call: ToolCall) -> Any:
             at=datetime.now(UTC),
             labels=labels,
         )
-    if call.name == "mock.log":
+    if call.name == "mock_log":
         now = datetime.now(UTC)
         keyword = args.get("keyword")
         return LogSearchQuery(
@@ -145,17 +151,17 @@ def _compact_data(data: Any) -> dict[str, Any]:
 
 
 def _summarize(tool_name: str, data: dict[str, Any]) -> str:
-    if tool_name == "mock.knowledge":
+    if tool_name == "mock_knowledge":
         hits = data.get("hits") if isinstance(data.get("hits"), list) else []
         if hits and isinstance(hits[0], dict):
             title = hits[0].get("title") or hits[0].get("document_id") or "命中"
             return f"知识命中：{title}"
         return "知识库检索完成"
-    if tool_name == "mock.metric":
+    if tool_name == "mock_metric":
         value = data.get("value")
         metric = data.get("metric") or "metric"
         return f"指标 {metric}≈{value}"
-    if tool_name == "mock.log":
+    if tool_name == "mock_log":
         events = data.get("events") if isinstance(data.get("events"), list) else []
         return f"日志命中 {len(events)} 条"
     return f"{tool_name} 完成"

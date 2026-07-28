@@ -12,6 +12,19 @@ from app.providers.llm.mock import MockLLMProvider
 from app.providers.llm.openai_compatible import OpenAICompatibleLLMProvider
 
 
+def test_settings_default_model_is_deepseek_v4_pro(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("LLM_MODEL", raising=False)
+    settings = Settings(_env_file=None)
+    assert settings.llm_model == "deepseek-v4-pro"
+
+
+def test_openai_provider_default_model_is_deepseek_v4_pro() -> None:
+    provider = OpenAICompatibleLLMProvider(api_key="sk-test")
+    assert provider.model_name == "deepseek-v4-pro"
+
+
 def test_build_llm_provider_test_env_forces_mock() -> None:
     settings = Settings(
         app_env=AppEnv.TEST,

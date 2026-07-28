@@ -18,7 +18,7 @@ from app.providers.llm.types import (
 def test_tool_spec_dump_openai_shape() -> None:
     spec = ToolSpec(
         function=ToolFunctionSpec(
-            name="mock.knowledge",
+            name="mock_knowledge",
             description="d",
             parameters={
                 "type": "object",
@@ -29,7 +29,7 @@ def test_tool_spec_dump_openai_shape() -> None:
     )
     dumped = spec.model_dump()
     assert dumped["type"] == "function"
-    assert dumped["function"]["name"] == "mock.knowledge"
+    assert dumped["function"]["name"] == "mock_knowledge"
 
 
 @pytest.mark.asyncio
@@ -52,7 +52,7 @@ async def test_mock_chat_cpu_calls_knowledge() -> None:
         [ChatMessage(role="user", content="cpu 高怎么解决")],
         tools=[],
     )
-    assert any(t.name == "mock.knowledge" for t in completion.tool_calls)
+    assert any(t.name == "mock_knowledge" for t in completion.tool_calls)
 
 
 @pytest.mark.asyncio
@@ -69,7 +69,7 @@ async def test_mock_after_tool_no_more_calls() -> None:
             ChatMessage(
                 role="tool",
                 tool_call_id="call_1",
-                name="mock.knowledge",
+                name="mock_knowledge",
                 content='{"summary":"ok"}',
             ),
         ],
@@ -97,7 +97,7 @@ async def test_openai_messages_sends_tools() -> None:
                             "id": "call_1",
                             "type": "function",
                             "function": {
-                                "name": "mock.knowledge",
+                                "name": "mock_knowledge",
                                 "arguments": '{"query":"cpu","top_k":3}',
                             },
                         }
@@ -114,7 +114,7 @@ async def test_openai_messages_sends_tools() -> None:
     tools = [
         ToolSpec(
             function=ToolFunctionSpec(
-                name="mock.knowledge",
+                name="mock_knowledge",
                 description="kb",
                 parameters={"type": "object", "properties": {}},
             )
@@ -126,7 +126,7 @@ async def test_openai_messages_sends_tools() -> None:
             [ChatMessage(role="user", content="cpu")],
             tools=tools,
         )
-    assert completion.tool_calls[0].name == "mock.knowledge"
+    assert completion.tool_calls[0].name == "mock_knowledge"
     assert completion.tool_calls[0].arguments["query"] == "cpu"
     payload = mock_client.post.await_args.kwargs["json"]
-    assert payload["tools"][0]["function"]["name"] == "mock.knowledge"
+    assert payload["tools"][0]["function"]["name"] == "mock_knowledge"

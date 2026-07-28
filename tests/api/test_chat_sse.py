@@ -46,7 +46,7 @@ def test_chat_cpu_uses_knowledge(client: TestClient) -> None:
     types = [e["type"] for e in events]
     assert "tool_call" in types
     assert any(
-        e.get("payload", {}).get("tool") == "mock.knowledge"
+        e.get("payload", {}).get("tool") == "mock_knowledge"
         for e in events
         if e["type"] == "tool_call"
     )
@@ -65,7 +65,9 @@ def test_chat_multi_turn_memory(client: TestClient) -> None:
         "/chat",
         json={"message": "我刚才说我叫什么", "conversation_id": cid},
     )
-    answer = next(e["message"] for e in _parse_sse(second.text) if e["type"] == "answer")
+    answer = next(
+        e["message"] for e in _parse_sse(second.text) if e["type"] == "answer"
+    )
     assert "maa" in answer.lower()
 
 

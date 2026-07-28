@@ -156,24 +156,24 @@ def _decide_tool_call(user_text: str) -> ToolCall | None:
     )
     if not needs_ops:
         return None
-    if any(k in text or k in lower for k in ("日志", "log", "error", "报错")) and not any(
-        k in text for k in ("怎么解决", "知识", "手册")
-    ):
+    if any(
+        k in text or k in lower for k in ("日志", "log", "error", "报错")
+    ) and not any(k in text for k in ("怎么解决", "知识", "手册")):
         return ToolCall(
             id="call_mock_log",
-            name="mock.log",
+            name="mock_log",
             arguments={"service": "api", "keyword": text[:40]},
         )
     if any(k in text or k in lower for k in ("指标", "metric")) and "怎么" not in text:
         return ToolCall(
             id="call_mock_metric",
-            name="mock.metric",
+            name="mock_metric",
             arguments={"metric": "cpu_usage", "service": "api"},
         )
     # 默认 /「怎么解决」优先知识库（验收：cpu 高怎么解决）
     return ToolCall(
         id="call_mock_knowledge",
-        name="mock.knowledge",
+        name="mock_knowledge",
         arguments={"query": text, "top_k": 3},
     )
 
@@ -181,11 +181,7 @@ def _decide_tool_call(user_text: str) -> ToolCall | None:
 def _compose_chat_answer(messages: Sequence[ChatMessage]) -> str:
     user_text = _latest_user_text(messages)
     name = _find_stated_name(messages)
-    tool_bits = [
-        (m.content or "")
-        for m in messages
-        if m.role == "tool" and m.content
-    ]
+    tool_bits = [(m.content or "") for m in messages if m.role == "tool" and m.content]
     if tool_bits:
         evidence = "\n".join(tool_bits)[:800]
         return (

@@ -25,7 +25,7 @@ class OpenAICompatibleLLMProvider(BaseLLMProvider):
         *,
         api_key: str,
         base_url: str = "https://api.deepseek.com",
-        model_name: str = "deepseek-chat",
+        model_name: str = "deepseek-v4-pro",
         timeout_seconds: float = 60.0,
     ) -> None:
         self._api_key = api_key

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from app.providers.llm.types import ToolCall
@@ -20,6 +22,11 @@ def test_build_chat_tool_specs_whitelist() -> None:
     assert "mock.executor" not in names
 
 
+def test_build_chat_tool_specs_use_api_safe_names() -> None:
+    for spec in build_chat_tool_specs():
+        assert re.fullmatch(r"[a-zA-Z0-9_-]+", spec.function.name)
+
+
 @pytest.mark.asyncio
 async def test_dispatch_knowledge() -> None:
     registry = build_mock_registry()
@@ -27,7 +34,7 @@ async def test_dispatch_knowledge() -> None:
         registry,
         ToolCall(
             id="c1",
-            name="mock.knowledge",
+            name="mock_knowledge",
             arguments={"query": "CPU", "top_k": 2},
         ),
     )

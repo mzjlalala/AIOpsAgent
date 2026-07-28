@@ -65,8 +65,8 @@ class Settings(BaseSettings):
         description="OpenAI 兼容 API Base URL。",
     )
     llm_model: str = Field(
-        default="deepseek-chat",
-        description="模型名，如 deepseek-v4-pro / deepseek-chat。",
+        default="deepseek-v4-pro",
+        description="模型名，如 deepseek-v4-pro。",
     )
     llm_timeout_seconds: float = Field(
         default=60.0,
