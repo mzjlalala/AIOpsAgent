@@ -5,13 +5,14 @@
 基于大语言模型 + Agent Workflow + RAG + MCP，支持故障分析、指标/日志排查、
 知识库检索、人工审批后的自动化操作，以及事故复盘报告生成。
 
-> 当前进度：**第二阶段 — MySQL Schema / SQLAlchemy / Repository**。
+> 当前进度：**第三阶段 — Tool 接口设计**。
 
 ## 技术栈（截至本阶段）
 
 - Python 3.13+
 - FastAPI / Pydantic v2 / Loguru
 - SQLAlchemy 2.x（async）+ asyncmy / Alembic + PyMySQL
+- Tool 抽象：`ainvoke` / `_execute` / ToolRegistry / MCP Adapter 接口
 - uv（依赖与虚拟环境）
 - pytest / aiosqlite / Ruff / Black / isort
 
@@ -70,15 +71,15 @@ app/
   db/            # Base / Session / Mixins
   models/        # SQLAlchemy ORM（15 张表）
   repositories/  # Async Repository
+  tools/         # Tool 抽象 / Registry / 领域接口
+  adapters/      # MCP 等外部适配器接口
   agents/        # Multi-Agent（后续阶段）
   workflows/     # LangGraph 工作流（后续阶段）
-  tools/         # Tool Adapter（后续阶段）
   rag/           # RAG 流水线（后续阶段）
   memory/        # 记忆系统（后续阶段）
   services/      # 领域服务（后续阶段）
   prompts/       # Prompt Markdown 文件
   providers/     # LLM / Embedding Provider
-  adapters/      # MCP 等外部适配器
   config/        # Settings + Logging
   schemas/       # Pydantic schemas
   utils/         # 公共工具
@@ -89,8 +90,8 @@ tests/           # pytest
 ## 开发阶段规划
 
 1. 项目初始化
-2. MySQL Schema / SQLAlchemy / Repository（当前）
-3. Tool 接口设计
+2. MySQL Schema / SQLAlchemy / Repository
+3. Tool 接口设计（当前）
 4. Mock Tool 实现
 5. Embedding Provider + RAG
 6. Memory 系统
