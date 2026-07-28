@@ -1,4 +1,4 @@
-"""将 LangGraph astream updates 映射为 SSE 事件。"""
+"""将 LangGraph astream updates 映射为面向问答的 SSE 事件。"""
 
 from __future__ import annotations
 
@@ -6,11 +6,18 @@ from typing import Any
 
 from app.schemas.sse import SseEvent
 
-_AGENT_MESSAGES: dict[str, str] = {
-    "metric": "Query Metrics...",
-    "log": "Searching Logs...",
-    "knowledge": "Searching Knowledge...",
-    "executor": "Executing...",
+_AGENT_START: dict[str, str] = {
+    "metric": "正在查看监控面板指标…",
+    "log": "正在检索近期错误与告警日志…",
+    "knowledge": "正在查阅运维知识库与排障手册…",
+    "executor": "正在做只读/演练类查询…",
+}
+
+_AGENT_DONE: dict[str, str] = {
+    "metric": "已拿到指标数据",
+    "log": "已整理相关日志线索",
+    "knowledge": "已检索到可参考的处置建议",
+    "executor": "演练查询已完成",
 }
 
 
@@ -24,7 +31,23 @@ def _artifact_summary(raw: dict[str, Any] | None) -> dict[str, Any]:
         "artifact_type": raw.get("artifact_type"),
         "success": raw.get("success"),
         "tool_name": (tool.get("metadata") or {}).get("tool_name"),
+        "snippet": _snippet_from_tool(tool),
     }
+
+
+def _snippet_from_tool(tool: dict[str, Any]) -> str:
+    data = tool.get("data")
+    if not isinstance(data, dict):
+        return ""
+    if "value" in data:
+        return f"指标值≈{data.get('value')}"
+    if "total" in data:
+        return f"命中日志 {data.get('total')} 条"
+    hits = data.get("hits")
+    if isinstance(hits, list) and hits:
+        title = (hits[0] or {}).get("title") or ""
+        return f"知识命中：{title}"[:80]
+    return ""
 
 
 def map_update_to_events(
@@ -54,7 +77,7 @@ def map_update_to_events(
                 node="approval_gate",
                 step_id=str(step_id) if step_id is not None else None,
                 agent=str(agent) if agent is not None else None,
-                message="Waiting Approval...",
+                message="需要人工确认后继续",
                 payload=payload,
             )
         )
@@ -69,7 +92,7 @@ def map_update_to_events(
                     workflow_id=workflow_id,
                     type="step_started",
                     node=node,
-                    message="Planning...",
+                    message="正在理解问题并制定排查思路…",
                     payload={"plan_size": len(patch.get("plan_steps") or [])},
                 )
             )
@@ -78,11 +101,15 @@ def map_update_to_events(
             if not step_id:
                 continue
             agent = None
+            goal = None
             for step in patch.get("plan_steps") or []:
                 if step.get("step_id") == step_id:
                     agent = step.get("agent")
+                    goal = step.get("goal")
                     break
-            message = _AGENT_MESSAGES.get(str(agent or ""), "Analyzing...")
+            message = _AGENT_START.get(str(agent or ""), "正在继续排查…")
+            if goal:
+                message = f"{message}（{goal}）"
             events.append(
                 SseEvent(
                     workflow_id=workflow_id,
@@ -101,15 +128,20 @@ def map_update_to_events(
             )
             arts = patch.get("artifacts") or []
             last_art = arts[-1] if arts else None
+            agent = str(done["agent"]) if done and done.get("agent") else None
+            message = _AGENT_DONE.get(agent or "", "本步排查完成")
+            summary = _artifact_summary(last_art)
+            if summary.get("snippet"):
+                message = f"{message}：{summary['snippet']}"
             events.append(
                 SseEvent(
                     workflow_id=workflow_id,
                     type="step_succeeded",
                     node=node,
                     step_id=str(done["step_id"]) if done else None,
-                    agent=str(done["agent"]) if done and done.get("agent") else None,
-                    message="Step succeeded",
-                    payload=_artifact_summary(last_art),
+                    agent=agent,
+                    message=message,
+                    payload=summary,
                 )
             )
         elif node == "mark_step_failed":
@@ -127,7 +159,7 @@ def map_update_to_events(
                     agent=(
                         str(failed["agent"]) if failed and failed.get("agent") else None
                     ),
-                    message="Step failed",
+                    message="本步排查未成功，将根据已有线索继续/收束",
                     payload={"error": patch.get("error")},
                 )
             )
@@ -138,7 +170,7 @@ def map_update_to_events(
                     workflow_id=workflow_id,
                     type="completed",
                     node=node,
-                    message=f"Workflow {status}",
+                    message="排查过程结束，正在汇总结论…",
                     payload={"status": status},
                 )
             )

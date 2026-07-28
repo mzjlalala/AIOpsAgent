@@ -6,6 +6,8 @@ export type SseEventType =
   | "step_failed"
   | "waiting_approval"
   | "completed"
+  | "answer"
+  | "answer_delta"
   | "error"
   | "snapshot";
 

@@ -1,104 +1,178 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import {
-  getWorkflow,
-  streamIncident,
-  streamOneClick,
-  type Scenario,
-  type SseEvent,
-} from "./api/client";
-import BrandHeader from "./components/BrandHeader.vue";
-import EventTimeline from "./components/EventTimeline.vue";
-import IncidentForm from "./components/IncidentForm.vue";
-import StatusBar from "./components/StatusBar.vue";
+import { streamIncident, streamOneClick, type SseEvent } from "./api/client";
+import ChatMain, { type ChatMessage } from "./components/ChatMain.vue";
+import Sidebar from "./components/Sidebar.vue";
 
-const query = ref("线上服务 CPU 突然打满 100%");
-const scenario = ref<Scenario>("auto_ops");
-const events = ref<SseEvent[]>([]);
-const workflowId = ref("");
-const status = ref("idle");
+interface SessionState {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+}
+
+const sessions = ref<SessionState[]>([]);
+const activeId = ref("");
+const draft = ref("");
 const running = ref(false);
-const errorMsg = ref("");
 let abort: AbortController | null = null;
+let msgSeq = 0;
+/** 当前轮次流式结论气泡 id */
+let streamingAssistantId: string | null = null;
 
-const formDisabled = computed(() => running.value);
+const active = computed(
+  () => sessions.value.find((s) => s.id === activeId.value) ?? null,
+);
+const messages = computed(() => active.value?.messages ?? []);
+const sessionList = computed(() =>
+  sessions.value.map(({ id, title }) => ({ id, title })),
+);
 
-function handleEvent(ev: SseEvent) {
-  events.value = [...events.value, ev];
-  if (ev.workflow_id) workflowId.value = ev.workflow_id;
-  if (ev.type === "completed") {
-    const s = (ev.payload?.status as string) || "completed";
-    status.value = s;
-  } else if (ev.type === "error") {
-    status.value = "error";
-    errorMsg.value = ev.message || "执行出错";
+function uid(prefix: string) {
+  msgSeq += 1;
+  return `${prefix}-${Date.now()}-${msgSeq}`;
+}
+
+function ensureSession(title: string): SessionState {
+  if (active.value) return active.value;
+  const session: SessionState = {
+    id: uid("s"),
+    title: title.slice(0, 28) || "新对话",
+    messages: [],
+  };
+  sessions.value = [session, ...sessions.value];
+  activeId.value = session.id;
+  return session;
+}
+
+function pushMessage(session: SessionState, role: ChatMessage["role"], content: string) {
+  session.messages = [
+    ...session.messages,
+    { id: uid("m"), role, content },
+  ];
+}
+
+function newChat() {
+  abort?.abort();
+  running.value = false;
+  draft.value = "";
+  activeId.value = "";
+}
+
+function selectSession(id: string) {
+  if (running.value) return;
+  activeId.value = id;
+  draft.value = "";
+}
+
+function appendAssistantDelta(session: SessionState, delta: string) {
+  if (!streamingAssistantId) {
+    streamingAssistantId = uid("m");
+    session.messages = [
+      ...session.messages,
+      { id: streamingAssistantId, role: "assistant", content: delta },
+    ];
+    return;
+  }
+  const msg = session.messages.find((m) => m.id === streamingAssistantId);
+  if (!msg) return;
+  msg.content += delta;
+  session.messages = [...session.messages];
+}
+
+function handleEvent(session: SessionState, ev: SseEvent) {
+  if (ev.type === "step_started" || ev.type === "step_succeeded" || ev.type === "step_failed") {
+    pushMessage(session, "progress", ev.message);
+    return;
+  }
+  if (ev.type === "answer_delta") {
+    appendAssistantDelta(session, ev.message || "");
+    return;
+  }
+  if (ev.type === "answer") {
+    if (streamingAssistantId) {
+      const msg = session.messages.find((m) => m.id === streamingAssistantId);
+      if (msg) {
+        msg.content = ev.message || msg.content || "（无结论）";
+        session.messages = [...session.messages];
+      }
+      streamingAssistantId = null;
+      return;
+    }
+    pushMessage(session, "assistant", ev.message || "（无结论）");
+    return;
+  }
+  if (ev.type === "error") {
+    pushMessage(session, "error", ev.message || "请求失败");
   }
 }
 
-async function runStream(starter: () => Promise<void>) {
+async function runAsk(text: string, mode: "chat" | "oneClick") {
+  const content = text.trim();
   if (running.value) return;
-  errorMsg.value = "";
-  events.value = [];
-  workflowId.value = "";
-  status.value = "running";
+  if (mode === "chat" && !content) return;
+
+  const title =
+    mode === "oneClick" ? "一键运维巡检" : content;
+  const session = ensureSession(title);
+  if (!session.title || session.title === "新对话") {
+    session.title = title.slice(0, 28);
+  }
+
+  const userText = mode === "oneClick" ? "请对默认服务做一键健康巡检，并给出问题判断与解决建议。" : content;
+  pushMessage(session, "user", userText);
+  draft.value = "";
   running.value = true;
+  streamingAssistantId = null;
   abort?.abort();
   abort = new AbortController();
 
   try {
-    await starter();
-    if (workflowId.value && status.value === "running") {
-      const run = await getWorkflow(workflowId.value);
-      status.value = run.status;
+    if (mode === "oneClick") {
+      await streamOneClick((ev) => handleEvent(session, ev), abort.signal);
+    } else {
+      await streamIncident(
+        content,
+        "auto_ops",
+        (ev) => handleEvent(session, ev),
+        abort.signal,
+      );
     }
   } catch (err) {
     if ((err as Error).name === "AbortError") return;
-    status.value = "error";
-    errorMsg.value = err instanceof Error ? err.message : String(err);
+    pushMessage(
+      session,
+      "error",
+      err instanceof Error ? err.message : String(err),
+    );
   } finally {
     running.value = false;
   }
 }
 
-async function startOneClick() {
-  await runStream(() => streamOneClick(handleEvent, abort?.signal));
+function onSend() {
+  void runAsk(draft.value, "chat");
 }
 
-async function startAdvanced() {
-  if (!query.value.trim()) return;
-  await runStream(() =>
-    streamIncident(
-      query.value.trim(),
-      scenario.value,
-      handleEvent,
-      abort?.signal,
-    ),
-  );
-}
-
-function resetAll() {
-  abort?.abort();
-  running.value = false;
-  events.value = [];
-  workflowId.value = "";
-  status.value = "idle";
-  errorMsg.value = "";
+function onOneClick() {
+  void runAsk("", "oneClick");
 }
 </script>
 
 <template>
-  <div class="shell">
-    <BrandHeader subtitle="一键运维演示 · Agent 自主查询指标 / 日志 / 知识库" />
-    <IncidentForm
-      v-model:model-query="query"
-      v-model:model-scenario="scenario"
-      :disabled="formDisabled"
-      @one-click="startOneClick"
-      @submit-advanced="startAdvanced"
-      @reset="resetAll"
+  <div class="app-shell">
+    <Sidebar
+      :sessions="sessionList"
+      :active-id="activeId"
+      @new-chat="newChat"
+      @select="selectSession"
     />
-    <StatusBar :workflow-id="workflowId" :status="status" />
-    <p v-if="errorMsg" class="error-banner">{{ errorMsg }}</p>
-    <EventTimeline :events="events" />
+    <ChatMain
+      :messages="messages"
+      :running="running"
+      :draft="draft"
+      @update:draft="draft = $event"
+      @send="onSend"
+      @one-click="onOneClick"
+    />
   </div>
 </template>

@@ -38,7 +38,7 @@ def test_map_update_planning() -> None:
     )
     assert len(events) == 1
     assert events[0].type == "step_started"
-    assert events[0].message == "Planning..."
+    assert "排查" in events[0].message
 
 
 def test_map_update_interrupt() -> None:
@@ -64,11 +64,14 @@ def test_incident_cpu_high_sse_completed(client: TestClient) -> None:
     types = [e["type"] for e in events]
     messages = [e.get("message", "") for e in events]
     assert "step_started" in types
-    assert any("Planning" in m for m in messages)
-    assert any("Query Metrics" in m for m in messages)
+    assert any("制定排查思路" in m or "Planning" in m for m in messages)
+    assert any("指标" in m or "Metrics" in m for m in messages)
     assert "waiting_approval" not in types
-    assert types[-1] == "completed"
-    assert events[-1]["payload"].get("status") == "completed"
+    assert "answer" in types
+    assert types[-1] == "answer"
+    if "answer_delta" in types:
+        deltas = [e["message"] for e in events if e["type"] == "answer_delta"]
+        assert "".join(deltas) == events[-1]["message"]
     wid = events[0]["workflow_id"]
     status = client.get(f"/workflows/{wid}")
     assert status.status_code == 200
@@ -83,7 +86,11 @@ def test_incident_memory_leak_completes(client: TestClient) -> None:
     events = _parse_sse(response.text)
     types = [e["type"] for e in events]
     assert "waiting_approval" not in types
-    assert types[-1] == "completed"
+    assert "answer_delta" in types
+    assert "answer" in types
+    assert types[-1] == "answer"
+    deltas = [e["message"] for e in events if e["type"] == "answer_delta"]
+    assert "".join(deltas) == events[-1]["message"]
     wid = events[0]["workflow_id"]
     status = client.get(f"/workflows/{wid}")
     assert status.status_code == 200
@@ -130,10 +137,16 @@ def test_one_click_ops_completes(client: TestClient) -> None:
     events = _parse_sse(response.text)
     types = [e["type"] for e in events]
     messages = [e.get("message", "") for e in events]
-    assert any("Planning" in m for m in messages)
-    assert any("Query Metrics" in m for m in messages)
-    assert any("Searching Logs" in m for m in messages)
-    assert any("Searching Knowledge" in m for m in messages)
+    assert any("制定排查思路" in m or "Planning" in m for m in messages)
+    assert any("指标" in m or "Metrics" in m for m in messages)
+    assert any("日志" in m or "Logs" in m for m in messages)
+    assert any("知识" in m or "Knowledge" in m for m in messages)
     assert "waiting_approval" not in types
-    assert types[-1] == "completed"
+    assert "answer_delta" in types
+    assert "answer" in types
+    assert types[-1] == "answer"
+    assert events[-1]["message"]
+    assert "".join(e["message"] for e in events if e["type"] == "answer_delta") == events[-1][
+        "message"
+    ]
     assert events[-1]["payload"].get("status") == "completed"

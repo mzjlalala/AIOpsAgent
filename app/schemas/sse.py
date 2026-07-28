@@ -12,6 +12,8 @@ SseEventType = Literal[
     "step_failed",
     "waiting_approval",
     "completed",
+    "answer",
+    "answer_delta",
     "error",
     "snapshot",
 ]

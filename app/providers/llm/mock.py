@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
+from collections.abc import AsyncIterator
 
 from app.providers.llm.base import BaseLLMProvider
 
@@ -36,8 +38,13 @@ _SCENARIO_REPORTS: dict[str, str] = {
         "建议抓 heap dump 并评估扩容。"
     ),
     "auto_ops": (
-        "一键巡检完成：指标与日志已采集，知识库给出处置建议；"
-        "若存在高风险变更请确认审批后再执行。"
+        "## 问题判断\n"
+        "默认服务巡检已完成，当前为 Mock 证据链下的示例结论。\n\n"
+        "## 可能原因\n"
+        "指标偏高或近期错误日志增多，需结合真实监控确认。\n\n"
+        "## 解决建议\n"
+        "1. 核对 CPU/内存水位与最近发布；2. 按知识库手册排查热点；"
+        "3. 必要时在低峰做滚动重启演练。"
     ),
 }
 
@@ -75,3 +82,11 @@ class MockLLMProvider(BaseLLMProvider):
             self._scenario,
             "【Mock 事故小结】基于 artifacts 完成汇总。",
         )
+
+    async def astream(self, *, system: str, prompt: str) -> AsyncIterator[str]:
+        """模拟流式：按小段产出，便于前端演示。"""
+        text = await self.acomplete(system=system, prompt=prompt)
+        size = 24
+        for i in range(0, len(text), size):
+            yield text[i : i + size]
+            await asyncio.sleep(0.01)

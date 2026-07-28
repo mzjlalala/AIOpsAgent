@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import AsyncIterator
 
 
 class BaseLLMProvider(ABC):
@@ -16,3 +17,9 @@ class BaseLLMProvider(ABC):
     @abstractmethod
     async def acomplete(self, *, system: str, prompt: str) -> str:
         """完成一次补全，返回纯文本。"""
+
+    async def astream(self, *, system: str, prompt: str) -> AsyncIterator[str]:
+        """流式补全；默认实现为一次 ``acomplete`` 后整段产出。"""
+        text = await self.acomplete(system=system, prompt=prompt)
+        if text:
+            yield text
