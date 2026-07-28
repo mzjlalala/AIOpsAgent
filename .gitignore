@@ -47,3 +47,7 @@ data/
 *.db
 *.sqlite3
 opsagent_alembic.db
+
+# Frontend
+web/node_modules/
+web/dist/

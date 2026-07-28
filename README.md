@@ -20,6 +20,7 @@
 - Agents：LangGraph **1.x**（StateGraph + START/END + conditional_edges，不用 AgentExecutor）+ MockLLM
 - Workflow：Plan-Execute 外层引擎 + MemorySaver + `interrupt`/`Command(resume)` 审批闸门
 - API：`POST /incident`（SSE）+ `/workflows/{id}` 状态/审批/事件续订
+- Web：Vue 3 + Vite 演示控制台（`web/`，proxy 联调）
 - uv（依赖与虚拟环境）
 - pytest / aiosqlite / Ruff / Black / isort
 
@@ -41,9 +42,24 @@ cp .env.example .env
 
 ### 3. 启动服务
 
+**命令行：**
+
 ```bash
 uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
+
+**PyCharm Run/Debug Configuration：**
+
+| 项 | 值 |
+|---|---|
+| 类型 | Python |
+| 运行方式 | 模块名（Module name） |
+| 模块名 | `uvicorn` |
+| 参数 | `app.main:app --host 0.0.0.0 --port 8000 --reload` |
+| 工作目录 | 项目根目录（`OpsAgent`，不要选到 `app/`） |
+| Python 解释器 | `OpsAgent/.venv/Scripts/python.exe`（须先 `uv sync`） |
+
+不要用「脚本」直接跑 `app/main.py`，也不要用其他项目的 venv。
 
 健康检查：
 
@@ -70,6 +86,19 @@ uv run black --check app tests
 uv run isort --check-only app tests
 ```
 
+### 6. 前端演示控制台（Vue3）
+
+另开终端：
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+浏览器打开 http://127.0.0.1:5173（需后端已在 `:8000` 运行）。  
+可切换 `cpu_high` / `memory_leak` 场景；后者会在闸门处出现审批按钮。
+
 ## 目录结构
 
 ```
@@ -90,6 +119,7 @@ app/
   config/        # Settings + Logging
   schemas/       # Pydantic schemas（含共享 MetadataFilter）
   utils/         # 公共工具
+web/             # Vue3 演示控制台（Vite proxy → :8000）
 alembic/         # 数据库迁移
 tests/           # pytest
 ```
