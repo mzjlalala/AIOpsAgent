@@ -1,0 +1,2 @@
+# Prompt templates live here as standalone Markdown files.
+# Do not embed production prompts as Python string literals.
