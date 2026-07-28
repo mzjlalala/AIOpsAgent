@@ -1,1 +1,1 @@
-"""LLM and embedding providers (unified abstraction)."""
+"""LLM 与 Embedding Provider（统一抽象）。"""

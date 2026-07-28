@@ -1,1 +1,1 @@
-"""Domain / application services."""
+"""领域 / 应用服务。"""

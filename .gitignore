@@ -46,3 +46,4 @@ temp/
 data/
 *.db
 *.sqlite3
+opsagent_alembic.db

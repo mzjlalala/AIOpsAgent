@@ -1,1 +1,1 @@
-"""Conversation, session, long-term, and experience memory."""
+"""对话、会话、长期与经验记忆。"""

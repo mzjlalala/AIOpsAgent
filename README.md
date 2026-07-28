@@ -5,14 +5,15 @@
 基于大语言模型 + Agent Workflow + RAG + MCP，支持故障分析、指标/日志排查、
 知识库检索、人工审批后的自动化操作，以及事故复盘报告生成。
 
-> 当前进度：**第一阶段 — 项目初始化**（可运行脚手架，业务能力后续分阶段交付）。
+> 当前进度：**第二阶段 — MySQL Schema / SQLAlchemy / Repository**。
 
-## 技术栈（本阶段）
+## 技术栈（截至本阶段）
 
 - Python 3.13+
 - FastAPI / Pydantic v2 / Loguru
+- SQLAlchemy 2.x（async）+ asyncmy / Alembic + PyMySQL
 - uv（依赖与虚拟环境）
-- pytest / Ruff / Black / isort
+- pytest / aiosqlite / Ruff / Black / isort
 
 ## 快速开始
 
@@ -28,7 +29,7 @@ uv sync --group dev
 cp .env.example .env
 ```
 
-按需修改 `.env` 中的 `APP_ENV`、`LOG_LEVEL`、`API_PORT` 等。
+按需修改 `.env` 中的 `APP_ENV`、`DATABASE_URL`、`API_PORT` 等。
 
 ### 3. 启动服务
 
@@ -42,18 +43,17 @@ uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 curl http://127.0.0.1:8000/health
 ```
 
-预期响应示例：
+### 4. 数据库迁移（MySQL）
 
-```json
-{
-  "status": "ok",
-  "service": "OpsAgent",
-  "env": "dev",
-  "version": "0.1.0"
-}
+确保 MySQL 已创建库，并配置好 `DATABASE_URL` / `DATABASE_URL_SYNC`，然后：
+
+```bash
+uv run alembic upgrade head
 ```
 
-### 4. 运行测试与质量检查
+本地无 MySQL 时，Repository 测试使用内存 SQLite（aiosqlite），无需本机数据库。
+
+### 5. 运行测试与质量检查
 
 ```bash
 uv run pytest
@@ -67,13 +67,14 @@ uv run isort --check-only app tests
 ```
 app/
   api/           # HTTP 路由（本阶段仅 /health）
+  db/            # Base / Session / Mixins
+  models/        # SQLAlchemy ORM（15 张表）
+  repositories/  # Async Repository
   agents/        # Multi-Agent（后续阶段）
   workflows/     # LangGraph 工作流（后续阶段）
   tools/         # Tool Adapter（后续阶段）
   rag/           # RAG 流水线（后续阶段）
   memory/        # 记忆系统（后续阶段）
-  models/        # ORM（后续阶段）
-  repositories/  # 数据访问（后续阶段）
   services/      # 领域服务（后续阶段）
   prompts/       # Prompt Markdown 文件
   providers/     # LLM / Embedding Provider
@@ -81,14 +82,14 @@ app/
   config/        # Settings + Logging
   schemas/       # Pydantic schemas
   utils/         # 公共工具
+alembic/         # 数据库迁移
 tests/           # pytest
-config/          # 环境覆盖预留
 ```
 
 ## 开发阶段规划
 
-1. 项目初始化（当前）
-2. MySQL Schema / SQLAlchemy / Repository
+1. 项目初始化
+2. MySQL Schema / SQLAlchemy / Repository（当前）
 3. Tool 接口设计
 4. Mock Tool 实现
 5. Embedding Provider + RAG

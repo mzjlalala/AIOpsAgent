@@ -1,1 +1,1 @@
-"""Tool adapters (metric, log, executor, knowledge)."""
+"""Tool 适配器（指标 / 日志 / 执行 / 知识）。"""

@@ -1,1 +1,1 @@
-"""Log analysis tools (SLS, ELK, Loki, mock)."""
+"""日志分析工具（SLS、ELK、Loki、Mock）。"""

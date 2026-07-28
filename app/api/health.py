@@ -1,4 +1,4 @@
-"""Health check endpoints."""
+"""健康检查接口。"""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ router = APIRouter(tags=["health"])
 
 @router.get("/health", response_model=HealthResponse)
 def health(request: Request) -> HealthResponse:
-    """Return service liveness information."""
+    """返回服务存活信息。"""
     settings: Settings = request.app.state.settings
     return HealthResponse(
         status="ok",

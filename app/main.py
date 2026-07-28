@@ -1,4 +1,4 @@
-"""FastAPI application factory and ASGI entrypoint."""
+"""FastAPI 应用工厂与 ASGI 入口。"""
 
 from __future__ import annotations
 
@@ -15,20 +15,20 @@ from app.config.settings import Settings, get_settings
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-    """Application lifespan hooks."""
+    """应用生命周期钩子。"""
     logger.info("OpsAgent starting")
     yield
     logger.info("OpsAgent shutting down")
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
-    """Build and configure the FastAPI application.
+    """构建并配置 FastAPI 应用。
 
     Args:
-        settings: Optional settings override (useful in tests).
+        settings: 可选配置覆盖（测试场景常用）。
 
     Returns:
-        Configured FastAPI application instance.
+        已配置的 FastAPI 应用实例。
     """
     resolved = settings or get_settings()
     setup_logging(resolved)
@@ -39,6 +39,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         debug=resolved.api_debug and resolved.is_dev,
         lifespan=lifespan,
     )
+    # 将配置挂到 app.state，便于路由与测试注入
     application.state.settings = resolved
     application.include_router(health_router)
     return application

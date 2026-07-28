@@ -1,4 +1,4 @@
-"""Loguru logging configuration."""
+"""Loguru 日志配置。"""
 
 from __future__ import annotations
 
@@ -10,10 +10,9 @@ from app.config.settings import AppEnv, Settings
 
 
 def setup_logging(settings: Settings) -> None:
-    """Configure Loguru sinks based on the current environment.
+    """按环境配置 Loguru 输出。
 
-    Development uses a human-readable format; test/prod use a compact format
-    suitable for log aggregation.
+    开发环境使用可读彩色格式；测试/生产使用便于采集的紧凑格式。
     """
     logger.remove()
 

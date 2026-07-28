@@ -1,1 +1,1 @@
-"""Knowledge / RAG retrieval tools."""
+"""知识 / RAG 检索工具。"""

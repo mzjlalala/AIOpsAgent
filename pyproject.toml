@@ -12,6 +12,11 @@ dependencies = [
     "loguru>=0.7.3",
     "httpx>=0.28.0",
     "python-dotenv>=1.0.1",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncmy>=0.2.9",
+    "alembic>=1.14.0",
+    "pymysql>=1.1.1",
+    "cryptography>=44.0.0",
 ]
 
 [dependency-groups]
@@ -21,6 +26,7 @@ dev = [
     "ruff>=0.8.0",
     "black>=24.10.0",
     "isort>=5.13.0",
+    "aiosqlite>=0.20.0",
 ]
 
 [build-system]
@@ -37,6 +43,10 @@ src = ["app", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "UP", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+"alembic/versions/*" = ["E501", "UP007", "UP035"]
+"app/models/*" = ["F821"]
 
 [tool.black]
 target-version = ["py313"]

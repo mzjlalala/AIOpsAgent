@@ -1,1 +1,1 @@
-"""Execution tools (K8s, SSH, Docker, mock)."""
+"""执行类工具（K8s、SSH、Docker、Mock）。"""

@@ -1,1 +1,1 @@
-"""Metric collection tools (Prometheus, mock)."""
+"""指标采集工具（Prometheus、Mock）。"""
