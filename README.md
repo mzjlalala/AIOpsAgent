@@ -5,7 +5,7 @@
 基于大语言模型 + Agent Workflow + RAG + MCP，支持故障分析、指标/日志排查、
 知识库检索、人工审批后的自动化操作，以及事故复盘报告生成。
 
-> 当前进度：**第八阶段 — Workflow（Plan-Execute / Approval）**。
+> 当前进度：**第九阶段 — API（Incident / Approval / SSE）**。
 
 ## 技术栈（截至本阶段）
 
@@ -19,6 +19,7 @@
 - Memory：能力组合 Backend + Conversation/Session/Long/Experience + `MemoryManager`
 - Agents：LangGraph **1.x**（StateGraph + START/END + conditional_edges，不用 AgentExecutor）+ MockLLM
 - Workflow：Plan-Execute 外层引擎 + MemorySaver + `interrupt`/`Command(resume)` 审批闸门
+- API：`POST /incident`（SSE）+ `/workflows/{id}` 状态/审批/事件续订
 - uv（依赖与虚拟环境）
 - pytest / aiosqlite / Ruff / Black / isort
 
@@ -73,7 +74,7 @@ uv run isort --check-only app tests
 
 ```
 app/
-  api/           # HTTP 路由（本阶段仅 /health）
+  api/           # HTTP：/health /incident /workflows
   db/            # Base / Session / Mixins
   models/        # SQLAlchemy ORM（15 张表）
   repositories/  # Async Repository
@@ -83,7 +84,7 @@ app/
   workflows/     # Plan-Execute / Approval（MemorySaver + interrupt）
   rag/           # RAG：models / ingest / retrieve / store / adapters
   memory/        # Memory：能力组合 Backend + Manager
-  services/      # 领域服务（后续阶段）
+  services/      # IncidentService 等应用服务
   prompts/       # Prompt Markdown 文件
   providers/     # LLM / Embedding Provider（含 Mock Embedding）
   config/        # Settings + Logging
@@ -102,8 +103,8 @@ tests/           # pytest
 5. Embedding Provider + RAG
 6. Memory 系统
 7. LangGraph Multi-Agent
-8. Workflow（Plan-Execute / Approval）（当前）
-9. API 接口（Chat / Incident / SSE）
+8. Workflow（Plan-Execute / Approval）
+9. API 接口（Chat / Incident / SSE）（当前）
 10. Docker 部署
 11. 测试完善
 

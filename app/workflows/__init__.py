@@ -1,6 +1,6 @@
 """LangGraph 工作流与 Plan-Execute 编排。"""
 
-from app.workflows.engine import WorkflowEngine
+from app.workflows.engine import WorkflowEngine, WorkflowNotFoundError
 from app.workflows.factory import build_workflow_engine
 from app.workflows.models import (
     ApprovalDecision,
@@ -18,6 +18,7 @@ __all__ = [
     "StepResult",
     "TimeoutPolicy",
     "WorkflowEngine",
+    "WorkflowNotFoundError",
     "WorkflowRun",
     "WorkflowState",
     "build_workflow_engine",
