@@ -43,7 +43,11 @@ function ensureSession(title: string): SessionState {
   };
   sessions.value = [session, ...sessions.value];
   activeId.value = session.id;
-  return session;
+  // 必须返回 sessions 内的响应式 proxy；返回 plain session
+  // 会使 SSE 写入绕过 proxy，首问回答无法触发视图更新。
+  const created = active.value;
+  if (!created) throw new Error("failed to activate session");
+  return created;
 }
 
 function pushMessage(session: SessionState, role: ChatMessage["role"], content: string) {

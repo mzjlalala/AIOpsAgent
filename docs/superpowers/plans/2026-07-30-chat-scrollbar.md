@@ -27,7 +27,7 @@
 - Consumes: 现有 `.main__body`、`.sidebar__list` 选择器
 - Produces: `:root` 变量 `--scrollbar-size` / `--scrollbar-thumb` / `--scrollbar-thumb-hover`；两处滚动容器的自定义滚动条规则
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 在 `web/tests/scrollbar-style.test.ts` 写入：
 
@@ -60,13 +60,13 @@ test("styles.css styles main__body and sidebar__list scrollbars", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `node --experimental-strip-types --test tests/scrollbar-style.test.ts`  
 Working directory: `web/`  
 Expected: FAIL（变量或选择器尚未存在）
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 在 `web/src/styles.css` 的 `:root` 中追加：
 
@@ -108,14 +108,14 @@ Expected: FAIL（变量或选择器尚未存在）
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `node --experimental-strip-types --test tests/scrollbar-style.test.ts`  
 Expected: PASS（2/2）
 
 另跑：`npm run build`（working directory `web/`）Expected: exit 0
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add web/src/styles.css web/tests/scrollbar-style.test.ts
