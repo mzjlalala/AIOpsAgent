@@ -12,6 +12,9 @@
   --font: "Noto Sans SC", "IBM Plex Sans", system-ui, sans-serif;
   --radius-pill: 999px;
   --radius: 18px;
+  --scrollbar-size: 6px;
+  --scrollbar-thumb: rgba(255, 255, 255, 0.2);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.4);
 }
 
 *,
@@ -158,6 +161,34 @@ button {
   overflow: auto;
   display: flex;
   flex-direction: column;
+}
+
+.main__body,
+.sidebar__list {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+.main__body::-webkit-scrollbar,
+.sidebar__list::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+
+.main__body::-webkit-scrollbar-track,
+.sidebar__list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.main__body::-webkit-scrollbar-thumb,
+.sidebar__list::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 999px;
+}
+
+.main__body::-webkit-scrollbar-thumb:hover,
+.sidebar__list::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
 }
 
 .welcome {
